@@ -8,8 +8,10 @@ import type { LessonPlanFormData } from '../types/lesson';
 import { PlusCircle, FileText, FileEdit } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { exportLessonToPDF, exportLessonsToWord } from '../services/exportService';
+import { useAuth } from '../contexts/AuthContext';
 
 export function DailyLessons() {
+    const { user } = useAuth();
     const { plans, addPlan, removePlan, fetchPlans } = useLessonStore();
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -26,7 +28,10 @@ export function DailyLessons() {
         setError(null);
         try {
             const newPlan = await generateLessonPlan(data);
-            addPlan(newPlan);
+            if (user) {
+                newPlan.userId = user.id;
+            }
+            await addPlan(newPlan);
             setSelectedPlanId(newPlan.id);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar plano.';

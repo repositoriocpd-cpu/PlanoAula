@@ -8,8 +8,10 @@ import { AssessmentList } from '../components/assessments/AssessmentList';
 import { useAssessmentStore } from '../store/useAssessmentStore';
 import { exportAssessmentToPDF, exportAssessmentsToWord } from '../services/exportService';
 import { jsPDF } from 'jspdf';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Assessments() {
+    const { user } = useAuth();
     const { assessments, addAssessment, removeAssessment, fetchAssessments } = useAssessmentStore();
     const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -26,10 +28,15 @@ export function Assessments() {
         setError(null);
         try {
             const assessment = await generateAssessment(data);
+            if (user) {
+                assessment.userId = user.id;
+            }
             await addAssessment(assessment);
             setSelectedAssessmentId(assessment.id);
         } catch (err) {
-            setError('Erro ao gerar avaliação. Verifique sua conexão.');
+            const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar avaliação.';
+            setError(`Erro: ${errorMessage}`);
+            console.error('Assessment generation error:', err);
         } finally {
             setIsGenerating(false);
         }

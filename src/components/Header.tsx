@@ -1,4 +1,4 @@
-import { Bell, Menu, User } from 'lucide-react';
+import { Menu, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
@@ -29,11 +29,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
 
             <div className="flex items-center gap-3">
-                <button className="relative p-2.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all">
-                    <Bell className="h-5 w-5 md:h-6 md:w-6" />
-                    <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-secondary rounded-full border-2 border-white"></span>
-                </button>
-
                 <div className="flex items-center gap-2 pl-2 border-l border-gray-100">
                     <div className="h-9 w-9 md:h-10 md:w-10 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center border border-primary/10 shadow-sm relative overflow-hidden group">
                         <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-10 transition-opacity" />

@@ -2,6 +2,7 @@ export type AssessmentType = 'Prova' | 'Atividade' | 'Rubrica' | 'Diagnóstica';
 
 export interface Assessment {
     id: string;
+    userId?: string;
     title: string;
     discipline: string;
     grade: string;

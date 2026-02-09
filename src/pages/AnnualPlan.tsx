@@ -8,8 +8,10 @@ import { AnnualPlanList } from '../components/annual/AnnualPlanList';
 import { useAnnualPlanStore } from '../store/useAnnualPlanStore';
 import type { AnnualPlanFormData } from '../types/annualPlan';
 import { exportAnnualPlanToPDF, exportAnnualPlansToWord } from '../services/exportService';
+import { useAuth } from '../contexts/AuthContext';
 
 export function AnnualPlan() {
+    const { user } = useAuth();
     const { plans, addPlan, removePlan, fetchPlans } = useAnnualPlanStore();
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -26,10 +28,15 @@ export function AnnualPlan() {
         setError(null);
         try {
             const plan = await generateAnnualPlan(data);
+            if (user) {
+                plan.userId = user.id;
+            }
             await addPlan(plan); // Save to store/DB
             setSelectedPlanId(plan.id);
         } catch (err) {
-            setError('Erro ao gerar planejamento. Verifique sua conexão.');
+            const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar planejamento.';
+            setError(`Erro: ${errorMessage}`);
+            console.error('Annual plan generation error:', err);
         } finally {
             setIsGenerating(false);
         }

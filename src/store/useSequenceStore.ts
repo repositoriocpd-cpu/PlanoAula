@@ -18,15 +18,29 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
     fetchSequences: async () => {
         set({ isLoading: true });
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            console.log('Fetching sequences for user:', user?.id);
+
+            if (!user) {
+                console.warn('No user found during fetchSequences');
+                set({ sequences: [] });
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('didactic_sequences')
                 .select('*')
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error fetching sequences:', error);
+                throw error;
+            }
 
             const formattedSequences: DidacticSequence[] = (data || []).map(item => ({
                 id: item.id,
+                userId: item.user_id,
                 theme: item.theme,
                 numClasses: item.num_classes,
                 createdAt: item.created_at,
@@ -39,19 +53,21 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
 
             set({ sequences: formattedSequences });
         } catch (error) {
-            console.error('Error fetching sequences:', error);
+            console.error('Error fetching sequences catch block:', error);
         } finally {
             set({ isLoading: false });
         }
     },
 
     addSequence: async (sequence) => {
+        console.log('Adding sequence to store and Supabase:', sequence.id);
         set((state) => ({ sequences: [sequence, ...state.sequences] }));
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('didactic_sequences')
                 .insert({
                     id: sequence.id,
+                    user_id: sequence.userId,
                     theme: sequence.theme,
                     num_classes: sequence.numClasses,
                     objectives: sequence.objectives,
@@ -60,11 +76,16 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
                     final_evaluation: sequence.finalEvaluation,
                     header_color: sequence.headerColor,
                     created_at: sequence.createdAt
-                });
+                })
+                .select();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error adding sequence:', error);
+                throw error;
+            }
+            console.log('Sequence added successfully to Supabase:', data);
         } catch (error) {
-            console.error('Error adding sequence:', error);
+            console.error('Error adding sequence catch block:', error);
         }
     },
 

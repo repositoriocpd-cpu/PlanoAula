@@ -18,15 +18,29 @@ export const useAssessmentStore = create<AssessmentStore>((set) => ({
     fetchAssessments: async () => {
         set({ isLoading: true });
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            console.log('Fetching assessments for user:', user?.id);
+
+            if (!user) {
+                console.warn('No user found during fetchAssessments');
+                set({ assessments: [] });
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('assessments')
                 .select('*')
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error fetching assessments:', error);
+                throw error;
+            }
 
             const formattedAssessments: Assessment[] = (data || []).map(item => ({
                 id: item.id,
+                userId: item.user_id,
                 title: item.title,
                 discipline: item.discipline,
                 grade: item.grade,
@@ -40,19 +54,21 @@ export const useAssessmentStore = create<AssessmentStore>((set) => ({
 
             set({ assessments: formattedAssessments });
         } catch (error) {
-            console.error('Error fetching assessments:', error);
+            console.error('Error fetching assessments catch block:', error);
         } finally {
             set({ isLoading: false });
         }
     },
 
     addAssessment: async (assessment) => {
+        console.log('Adding assessment to store and Supabase:', assessment.id);
         set((state) => ({ assessments: [assessment, ...state.assessments] }));
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('assessments')
                 .insert({
                     id: assessment.id,
+                    user_id: assessment.userId,
                     title: assessment.title,
                     discipline: assessment.discipline,
                     grade: assessment.grade,
@@ -62,11 +78,16 @@ export const useAssessmentStore = create<AssessmentStore>((set) => ({
                     rubric: assessment.rubric,
                     header_color: assessment.headerColor,
                     created_at: assessment.createdAt
-                });
+                })
+                .select();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error adding assessment:', error);
+                throw error;
+            }
+            console.log('Assessment added successfully to Supabase:', data);
         } catch (error) {
-            console.error('Error adding assessment:', error);
+            console.error('Error adding assessment catch block:', error);
         }
     },
 

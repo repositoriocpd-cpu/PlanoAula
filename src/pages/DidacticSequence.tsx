@@ -8,8 +8,10 @@ import { SequenceList } from '../components/sequence/SequenceList';
 import { useSequenceStore } from '../store/useSequenceStore';
 import type { SequenceFormData } from '../types/sequence';
 import { exportSequenceToPDF, exportSequencesToWord } from '../services/exportService';
+import { useAuth } from '../contexts/AuthContext';
 
 export function DidacticSequence() {
+    const { user } = useAuth();
     const { sequences, addSequence, removeSequence, fetchSequences } = useSequenceStore();
     const [selectedSequenceId, setSelectedSequenceId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -26,10 +28,15 @@ export function DidacticSequence() {
         setError(null);
         try {
             const sequence = await generateDidacticSequence(data);
+            if (user) {
+                sequence.userId = user.id;
+            }
             await addSequence(sequence);
             setSelectedSequenceId(sequence.id);
         } catch (err) {
-            setError('Erro ao gerar sequência. Verifique sua conexão.');
+            const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar sequência.';
+            setError(`Erro: ${errorMessage}`);
+            console.error('Sequence generation error:', err);
         } finally {
             setIsGenerating(false);
         }

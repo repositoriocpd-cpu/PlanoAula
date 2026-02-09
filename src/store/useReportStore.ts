@@ -18,15 +18,29 @@ export const useReportStore = create<ReportStore>((set) => ({
     fetchReports: async () => {
         set({ isLoading: true });
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            console.log('Fetching reports for user:', user?.id);
+
+            if (!user) {
+                console.warn('No user found during fetchReports');
+                set({ reports: [] });
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('reports')
                 .select('*')
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error fetching reports:', error);
+                throw error;
+            }
 
             const formattedReports: Report[] = (data || []).map(item => ({
                 id: item.id,
+                userId: item.user_id,
                 studentName: item.student_name,
                 grade: item.grade,
                 period: item.period,
@@ -37,30 +51,37 @@ export const useReportStore = create<ReportStore>((set) => ({
 
             set({ reports: formattedReports });
         } catch (error) {
-            console.error('Error fetching reports:', error);
+            console.error('Error fetching reports catch block:', error);
         } finally {
             set({ isLoading: false });
         }
     },
 
     addReport: async (report) => {
+        console.log('Adding report to store and Supabase:', report.id);
         set((state) => ({ reports: [report, ...state.reports] }));
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('reports')
                 .insert({
                     id: report.id,
+                    user_id: report.userId,
                     student_name: report.studentName,
                     grade: report.grade,
                     period: report.period,
                     content: report.content,
                     header_color: report.headerColor,
                     created_at: report.createdAt
-                });
+                })
+                .select();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error adding report:', error);
+                throw error;
+            }
+            console.log('Report added successfully to Supabase:', data);
         } catch (error) {
-            console.error('Error adding report:', error);
+            console.error('Error adding report catch block:', error);
         }
     },
 

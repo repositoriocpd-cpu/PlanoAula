@@ -1,5 +1,6 @@
 export interface Report {
     id: string;
+    userId?: string;
     studentName: string;
     grade: string;
     period: string; // e.g. "1º Bimestre"

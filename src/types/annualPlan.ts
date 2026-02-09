@@ -1,5 +1,6 @@
 export interface AnnualPlan {
     id: string;
+    userId?: string;
     discipline: string;
     grade: string;
     createdAt: string;

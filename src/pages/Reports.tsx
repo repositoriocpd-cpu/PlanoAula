@@ -8,8 +8,10 @@ import { ReportList } from '../components/reports/ReportList';
 import { useReportStore } from '../store/useReportStore';
 import { exportReportToPDF, exportReportsToWord } from '../services/exportService';
 import { jsPDF } from 'jspdf';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Reports() {
+    const { user } = useAuth();
     const { reports, addReport, removeReport, fetchReports } = useReportStore();
     const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -26,10 +28,15 @@ export function Reports() {
         setError(null);
         try {
             const report = await generateReport(data);
+            if (user) {
+                report.userId = user.id;
+            }
             await addReport(report);
             setSelectedReportId(report.id);
         } catch (err) {
-            setError('Erro ao gerar relatório. Verifique sua conexão.');
+            const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar relatório.';
+            setError(`Erro: ${errorMessage}`);
+            console.error('Report generation error:', err);
         } finally {
             setIsGenerating(false);
         }

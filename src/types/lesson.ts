@@ -1,5 +1,6 @@
 export interface LessonPlan {
     id: string;
+    userId?: string;
     title: string; // Generated or User defined
     discipline: string;
     grade: string;

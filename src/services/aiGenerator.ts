@@ -16,7 +16,7 @@ const getGenAI = () => {
 
 export async function generateLessonPlan(data: LessonPlanFormData): Promise<LessonPlan> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `
     Como um especialista pedagógico, crie um Plano de Aula EXCELENTE e completo, estritamente alinhado à Base Nacional Comum Curricular (BNCC).
@@ -82,7 +82,7 @@ export async function generateLessonPlan(data: LessonPlanFormData): Promise<Less
 
 export async function generateAnnualPlan(data: AnnualPlanFormData): Promise<AnnualPlan> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const isInfantil = data.grade === 'Educação Infantil';
 
@@ -160,7 +160,7 @@ export async function generateAnnualPlan(data: AnnualPlanFormData): Promise<Annu
 
 export async function generateDidacticSequence(data: SequenceFormData): Promise<DidacticSequence> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `
     Crie uma Sequência Didática alinhada à BNCC sobre:
@@ -212,7 +212,7 @@ export async function generateDidacticSequence(data: SequenceFormData): Promise<
 
 export async function generateAssessment(data: AssessmentFormData): Promise<Assessment> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `
     Crie uma ${data.type} alinhada à BNCC para:
@@ -276,7 +276,7 @@ export async function generateAssessment(data: AssessmentFormData): Promise<Asse
 
 export async function generateReport(data: ReportFormData): Promise<Report> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `
     Crie um Relatório Individual de Desenvolvimento (Parecer Descritivo) para:

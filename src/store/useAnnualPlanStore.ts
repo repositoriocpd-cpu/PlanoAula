@@ -18,15 +18,31 @@ export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
     fetchPlans: async () => {
         set({ isLoading: true });
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            console.log('Fetching plans for user:', user?.id);
+
+            if (!user) {
+                console.warn('No user found during fetchPlans');
+                set({ plans: [] });
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('annual_plans')
                 .select('*')
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error fetching plans:', error);
+                throw error;
+            }
+
+            console.log('Fetched plans count:', data?.length || 0);
 
             const formattedPlans: AnnualPlan[] = (data || []).map(item => ({
                 id: item.id,
+                userId: item.user_id,
                 discipline: item.discipline,
                 grade: item.grade,
                 createdAt: item.created_at,
@@ -38,19 +54,22 @@ export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
 
             set({ plans: formattedPlans });
         } catch (error) {
-            console.error('Error fetching annual plans:', error);
+            console.error('Error fetching plans catch block:', error);
         } finally {
             set({ isLoading: false });
         }
     },
 
     addPlan: async (plan) => {
+        console.log('Adding plan to store and Supabase:', plan.id);
+        // Optimistic update
         set((state) => ({ plans: [plan, ...state.plans] }));
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('annual_plans')
                 .insert({
                     id: plan.id,
+                    user_id: plan.userId,
                     discipline: plan.discipline,
                     grade: plan.grade,
                     plan_type: plan.planType,
@@ -58,11 +77,18 @@ export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
                     bimesters: plan.bimesters,
                     infantil_content: plan.infantilContent,
                     created_at: plan.createdAt
-                });
+                })
+                .select();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error adding plan:', error);
+                // Revert optimistic update?
+                throw error;
+            }
+            console.log('Plan added successfully to Supabase:', data);
         } catch (error) {
-            console.error('Error adding annual plan:', error);
+            console.error('Error adding plan catch block:', error);
+            // Optionally revert local state here
         }
     },
 

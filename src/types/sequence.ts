@@ -1,5 +1,6 @@
 export interface DidacticSequence {
     id: string;
+    userId?: string;
     theme: string;
     numClasses: number;
     createdAt: string;
