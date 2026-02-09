@@ -8,7 +8,16 @@ export function Login() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { user } = useAuth();
     const navigate = useNavigate();
+
+    // Auto-navigate if the listener already caught the session
+    React.useEffect(() => {
+        if (user && !isLoading) {
+            console.log('User already detected in Login, navigating home...');
+            navigate('/');
+        }
+    }, [user, navigate, isLoading]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

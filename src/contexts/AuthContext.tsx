@@ -20,20 +20,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     const fetchProfile = async (userId: string) => {
+        console.log('fetchProfile started for:', userId);
         try {
-            const { data, error } = await supabase
+            // Add a specific timeout for the database query
+            const profilePromise = supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', userId)
                 .single();
 
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+            );
+
+            const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
             if (error) {
-                console.error('Error fetching profile:', error);
+                console.warn('Error fetching profile (expected if new user):', error);
                 return null;
             }
+            console.log('Profile fetched successfully');
             return data as Profile;
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error('fetchProfile exploded:', error);
             return null;
         }
     };
@@ -62,7 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(null);
                 setProfile(null);
             } finally {
-                console.log('setLoading(false) called in getSession');
+                // Ensure loading is set to false even if we are still waiting for profile
+                console.log('setLoading(false) in getSession');
                 setLoading(false);
             }
         };
@@ -85,15 +95,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 if (session?.user) {
                     console.log('Fetching profile for event:', session.user.id);
+                    // Don't wait for profile to set loading to false
+                    setLoading(false);
                     const userProfile = await fetchProfile(session.user.id);
                     setProfile(userProfile);
                 } else {
                     setProfile(null);
+                    setLoading(false);
                 }
             } catch (error) {
                 console.error('Error in onAuthStateChange:', error);
-            } finally {
-                console.log('setLoading(false) called in onAuthStateChange');
                 setLoading(false);
             }
         });
