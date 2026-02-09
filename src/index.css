@@ -1,0 +1,88 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #7C3AED;
+  /* Violet-600 */
+  --color-primary-foreground: #FFFFFF;
+
+  --color-secondary: #EC4899;
+  /* Pink-500 */
+  --color-secondary-foreground: #FFFFFF;
+
+  --color-accent-blue: #06B6D4;
+  /* Cyan-500 */
+  --color-accent-orange: #F97316;
+  /* Orange-500 */
+
+  --color-background: #F3F4F6;
+  /* Gray-50 */
+  --color-surface: #FFFFFF;
+  --color-text: #1F2937;
+  /* Gray-800 */
+  --color-text-muted: #6B7280;
+  /* Gray-500 */
+
+  --font-sans: "Inter", sans-serif;
+
+  --radius-lg: 1rem;
+  /* Rounded-2xl */
+  --radius-xl: 1.5rem;
+  /* Rounded-3xl */
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+  }
+  
+  .glass-dark {
+    @apply bg-gray-900/80 backdrop-blur-xl border border-white/10;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 7s ease-in-out infinite;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-200 rounded-full;
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 15s ease infinite;
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
