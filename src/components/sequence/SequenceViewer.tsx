@@ -1,10 +1,7 @@
-import React from 'react';
+import { FileText, FileEdit, ArrowLeft } from 'lucide-react';
 import { FormattedText } from '../ui/FormattedText';
-import { Download, ArrowLeft } from 'lucide-react';
 import type { DidacticSequence } from '../../types/sequence';
-import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun } from 'docx';
-import { saveAs } from 'file-saver';
+import { exportSequenceToPDF, exportSequencesToWord } from '../../services/exportService';
 
 interface SequenceViewerProps {
     sequence: DidacticSequence;
@@ -14,96 +11,42 @@ interface SequenceViewerProps {
 export function SequenceViewer({ sequence, onBack }: SequenceViewerProps) {
 
     const handleDownloadPDF = () => {
-        const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text(`Sequência Didática: ${sequence.theme}`, 20, 20);
-        doc.setFontSize(12);
-        doc.text(`Duração: ${sequence.numClasses} aulas`, 20, 30);
-
-        let y = 40;
-
-        // Objectives
-        doc.setFont('helvetica', 'bold');
-        doc.text('Objetivos:', 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'normal');
-        sequence.objectives.forEach(obj => {
-            const lines = doc.splitTextToSize(`• ${obj}`, 170);
-            doc.text(lines, 25, y);
-            y += lines.length * 6;
-        });
-
-        if (y > 270) { doc.addPage(); y = 20; }
-        y += 4;
-
-        // Classes
-        sequence.classes.forEach(c => {
-            if (y > 250) { doc.addPage(); y = 20; }
-            doc.setFont('helvetica', 'bold');
-            doc.text(`Aula ${c.classNumber}: ${c.topic}`, 20, y);
-            y += 6;
-            doc.setFont('helvetica', 'normal');
-
-            const addItems = (label: string, items: string[]) => {
-                doc.setFont('helvetica', 'italic');
-                doc.text(label, 25, y);
-                y += 5;
-                doc.setFont('helvetica', 'normal');
-                items.forEach(i => {
-                    const lines = doc.splitTextToSize(`- ${i}`, 160);
-                    doc.text(lines, 30, y);
-                    y += lines.length * 5;
-                });
-                y += 2;
-            };
-
-            addItems("Atividades:", c.activities);
-            addItems("Recursos:", c.resources);
-            y += 6;
-        });
-
-        doc.save(`Sequencia_${sequence.theme}.pdf`);
+        exportSequenceToPDF(sequence);
     };
 
     const handleDownloadWord = () => {
-        const doc = new Document({
-            sections: [{
-                properties: {},
-                children: [
-                    new Paragraph({
-                        children: [
-                            new TextRun({ text: "Sequência Didática", bold: true, size: 32 }),
-                            new TextRun({ text: `\nTema: ${sequence.theme}`, size: 24, break: 1 }),
-                        ],
-                    }),
-                    ...sequence.classes.flatMap(c => [
-                        new Paragraph({
-                            children: [new TextRun({ text: `\nAula ${c.classNumber}: ${c.topic}`, bold: true, size: 28, break: 1 })],
-                        }),
-                        new Paragraph({
-                            children: [new TextRun({ text: "Atividades: " + c.activities.join(", "), italics: true })],
-                        }),
-                    ])
-                ],
-            }],
-        });
-        Packer.toBlob(doc).then(blob => {
-            saveAs(blob, `Sequencia_${sequence.theme}.docx`);
-        });
+        exportSequencesToWord([sequence], `Sequencia_${sequence.theme.replace(/ /g, '_')}.docx`);
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col h-full">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-lg">
-                <button onClick={onBack} className="flex items-center text-gray-600 hover:text-gray-900">
-                    <ArrowLeft className="h-5 w-5 mr-1" /> Voltar
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                <button
+                    onClick={onBack}
+                    className="flex items-center text-gray-500 hover:text-gray-900 font-bold text-sm bg-gray-100/50 hover:bg-gray-100 px-4 py-2 rounded-xl transition-all"
+                >
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
                 </button>
-                <div className="flex space-x-2">
-                    <button onClick={handleDownloadPDF} className="p-2 text-gray-600 hover:text-primary" title="Baixar PDF">
-                        <Download className="h-5 w-5" />
+                <div className="flex bg-gray-100 p-1.5 rounded-2xl shadow-inner border border-gray-200/50">
+                    <button
+                        onClick={handleDownloadPDF}
+                        className="flex items-center space-x-2 px-4 py-2.5 text-rose-600 hover:bg-white hover:shadow-sm rounded-xl transition-all duration-300 group"
+                        title="Baixar PDF"
+                    >
+                        <div className="p-1 px-1.5 bg-rose-50 text-rose-500 rounded-lg group-hover:scale-110 transition-transform">
+                            <FileText className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-black tracking-tight">PDF</span>
                     </button>
-                    <button onClick={handleDownloadWord} className="p-2 text-gray-600 hover:text-primary" title="Baixar Word">
-                        <Download className="h-5 w-5 text-blue-600" />
+                    <button
+                        onClick={handleDownloadWord}
+                        className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-xl transition-all duration-300 group"
+                        title="Baixar Word"
+                    >
+                        <div className="p-1 px-1.5 bg-blue-50 text-blue-500 rounded-lg group-hover:scale-110 transition-transform">
+                            <FileEdit className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-black tracking-tight">Word</span>
                     </button>
                 </div>
             </div>
@@ -115,7 +58,9 @@ export function SequenceViewer({ sequence, onBack }: SequenceViewerProps) {
                 <div className="mb-6">
                     <h3 className="font-semibold text-gray-800 mb-2">Objetivos</h3>
                     <ul className="list-disc pl-5 text-gray-700 space-y-1">
-                        {sequence.objectives.map((obj, i) => <li key={i}>{obj}</li>)}
+                        {sequence.objectives.map((obj, i) => (
+                            <li key={i}>{obj}</li>
+                        ))}
                     </ul>
                 </div>
 

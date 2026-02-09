@@ -1,9 +1,6 @@
-import React from 'react';
-import { Download, ArrowLeft } from 'lucide-react';
+import { FileText, FileEdit, ArrowLeft } from 'lucide-react';
 import type { AnnualPlan } from '../../types/annualPlan';
-import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun } from 'docx';
-import { saveAs } from 'file-saver';
+import { exportAnnualPlanToPDF, exportAnnualPlansToWord } from '../../services/exportService';
 
 interface AnnualPlanViewerProps {
     plan: AnnualPlan;
@@ -13,89 +10,42 @@ interface AnnualPlanViewerProps {
 export function AnnualPlanViewer({ plan, onBack }: AnnualPlanViewerProps) {
 
     const handleDownloadPDF = () => {
-        const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text(`Planejamento Anual - ${plan.discipline}`, 20, 20);
-        doc.setFontSize(12);
-        doc.text(`Série: ${plan.grade}`, 20, 30);
-
-        let y = 40;
-
-        plan.bimesters.forEach((bimester) => {
-            if (y > 250) { doc.addPage(); y = 20; }
-            doc.setFont('helvetica', 'bold');
-            doc.text(bimester.name, 20, y);
-            y += 8;
-            doc.setFont('helvetica', 'normal');
-
-            const addList = (title: string, items: string[]) => {
-                doc.setFont('helvetica', 'italic');
-                doc.text(title, 25, y);
-                doc.setFont('helvetica', 'normal');
-                y += 6;
-                items.forEach(item => {
-                    const lines = doc.splitTextToSize(`• ${item}`, 160);
-                    doc.text(lines, 30, y);
-                    y += lines.length * 6;
-                });
-                y += 4;
-            };
-
-            addList("Temas:", bimester.themes);
-            addList("Habilidades BNCC:", bimester.bnccSkills);
-            y += 4;
-        });
-
-        doc.save(`Planejamento_Anual_${plan.discipline}.pdf`);
+        exportAnnualPlanToPDF(plan);
     };
 
     const handleDownloadWord = () => {
-        const doc = new Document({
-            sections: [{
-                properties: {},
-                children: [
-                    new Paragraph({
-                        children: [
-                            new TextRun({ text: "Planejamento Anual", bold: true, size: 32 }),
-                            new TextRun({ text: `\nDisciplina: ${plan.discipline}`, size: 24, break: 1 }),
-                            new TextRun({ text: `\nSérie: ${plan.grade}`, size: 24, break: 1 }),
-                        ],
-                    }),
-                    ...plan.bimesters.flatMap(bimester => [
-                        new Paragraph({
-                            children: [new TextRun({ text: `\n${bimester.name}`, bold: true, size: 28, break: 1 })],
-                        }),
-                        new Paragraph({
-                            children: [new TextRun({ text: "Temas: " + bimester.themes.join(", "), italics: true })],
-                        }),
-                        new Paragraph({
-                            children: [new TextRun({ text: "Habilidades: " + bimester.bnccSkills.join(", ") })],
-                        }),
-                        new Paragraph({
-                            children: [new TextRun({ text: "Avaliação: " + bimester.evaluation })],
-                        }),
-                    ])
-                ],
-            }],
-        });
-
-        Packer.toBlob(doc).then(blob => {
-            saveAs(blob, `Planejamento_Anual_${plan.discipline}.docx`);
-        });
+        exportAnnualPlansToWord([plan], `Plano_Anual_${plan.discipline}.docx`);
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col h-full">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-lg">
-                <button onClick={onBack} className="flex items-center text-gray-600 hover:text-gray-900">
-                    <ArrowLeft className="h-5 w-5 mr-1" /> Voltar
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                <button
+                    onClick={onBack}
+                    className="flex items-center text-gray-500 hover:text-gray-900 font-bold text-sm bg-gray-100/50 hover:bg-gray-100 px-4 py-2 rounded-xl transition-all"
+                >
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
                 </button>
-                <div className="flex space-x-2">
-                    <button onClick={handleDownloadPDF} className="p-2 text-gray-600 hover:text-primary" title="Baixar PDF">
-                        <Download className="h-5 w-5" />
+                <div className="flex bg-gray-100 p-1.5 rounded-2xl shadow-inner border border-gray-200/50">
+                    <button
+                        onClick={handleDownloadPDF}
+                        className="flex items-center space-x-2 px-4 py-2.5 text-rose-600 hover:bg-white hover:shadow-sm rounded-xl transition-all duration-300 group"
+                        title="Baixar PDF"
+                    >
+                        <div className="p-1 px-1.5 bg-rose-50 text-rose-500 rounded-lg group-hover:scale-110 transition-transform">
+                            <FileText className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-black tracking-tight">PDF</span>
                     </button>
-                    <button onClick={handleDownloadWord} className="p-2 text-gray-600 hover:text-primary" title="Baixar Word">
-                        <Download className="h-5 w-5 text-blue-600" />
+                    <button
+                        onClick={handleDownloadWord}
+                        className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-xl transition-all duration-300 group"
+                        title="Baixar Word"
+                    >
+                        <div className="p-1 px-1.5 bg-blue-50 text-blue-500 rounded-lg group-hover:scale-110 transition-transform">
+                            <FileEdit className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-black tracking-tight">Word</span>
                     </button>
                 </div>
             </div>
