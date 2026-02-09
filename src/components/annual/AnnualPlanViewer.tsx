@@ -98,7 +98,7 @@ export function AnnualPlanViewer({ plan, onBack, onDelete }: AnnualPlanViewerPro
                 </div>
             </div>
 
-            <div className="p-8 overflow-y-auto custom-scrollbar">
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
                 <h1 className="text-2xl font-bold mb-2" style={{ color: activeColor }}>Planejamento Anual</h1>
                 <div className="flex space-x-4 text-sm text-gray-500 mb-8">
                     <span className="font-semibold text-gray-700">{plan.discipline}</span>

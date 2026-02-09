@@ -102,7 +102,7 @@ export function LessonViewer({ plan, onBack, onDelete }: LessonViewerProps) {
                 </div>
             </div>
 
-            <div className="p-8 overflow-y-auto custom-scrollbar">
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
                 <h1 className="text-2xl font-bold mb-2" style={{ color: activeColor }}>{plan.title}</h1>
                 <div className="flex space-x-4 text-sm text-gray-500 mb-6">
                     <span>{plan.discipline}</span>

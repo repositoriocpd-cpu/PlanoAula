@@ -97,51 +97,51 @@ export function SequenceViewer({ sequence, onBack, onDelete }: SequenceViewerPro
                         </button>
                     )}
                 </div>
+            </div>
 
-                <div className="p-8 overflow-y-auto custom-scrollbar">
-                    <h1 className="text-2xl font-bold mb-2" style={{ color: activeColor }}>{sequence.theme}</h1>
-                    <p className="text-gray-600 mb-6">{sequence.numClasses} Aulas Previstas</p>
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                <h1 className="text-2xl font-bold mb-2" style={{ color: activeColor }}>{sequence.theme}</h1>
+                <p className="text-gray-600 mb-6">{sequence.numClasses} Aulas Previstas</p>
 
-                    <div className="mb-6">
-                        <h3 className="font-semibold mb-2" style={{ color: activeColor }}>Objetivos</h3>
-                        <ul className="list-disc pl-5 text-gray-700 space-y-1 text-justify">
-                            {sequence.objectives.map((obj, i) => (
-                                <li key={i}>{obj}</li>
-                            ))}
-                        </ul>
-                    </div>
+                <div className="mb-6">
+                    <h3 className="font-semibold mb-2" style={{ color: activeColor }}>Objetivos</h3>
+                    <ul className="list-disc pl-5 text-gray-700 space-y-1 text-justify">
+                        {sequence.objectives.map((obj, i) => (
+                            <li key={i}>{obj}</li>
+                        ))}
+                    </ul>
+                </div>
 
-                    <div className="space-y-6">
-                        {sequence.classes.map((c) => (
-                            <div key={c.classNumber} className="border-l-4 pl-4 py-2 bg-gray-50 rounded-r-md" style={{ borderColor: activeColor }}>
-                                <div className="flex items-center mb-2">
-                                    <span className="text-white text-xs font-bold px-2 py-1 rounded-full mr-2" style={{ backgroundColor: activeColor }}>
-                                        AULA {c.classNumber}
-                                    </span>
-                                    <h4 className="font-bold text-gray-800">{c.topic}</h4>
+                <div className="space-y-6">
+                    {sequence.classes.map((c) => (
+                        <div key={c.classNumber} className="border-l-4 pl-4 py-2 bg-gray-50 rounded-r-md" style={{ borderColor: activeColor }}>
+                            <div className="flex items-center mb-2">
+                                <span className="text-white text-xs font-bold px-2 py-1 rounded-full mr-2" style={{ backgroundColor: activeColor }}>
+                                    AULA {c.classNumber}
+                                </span>
+                                <h4 className="font-bold text-gray-800">{c.topic}</h4>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-4 mt-3">
+                                <div>
+                                    <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Atividades</h5>
+                                    <ul className="list-disc pl-4 text-sm text-gray-700 mt-1 text-justify">
+                                        {c.activities.map((act, i) => <li key={i}>{act}</li>)}
+                                    </ul>
                                 </div>
-                                <div className="grid md:grid-cols-2 gap-4 mt-3">
-                                    <div>
-                                        <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Atividades</h5>
-                                        <ul className="list-disc pl-4 text-sm text-gray-700 mt-1 text-justify">
-                                            {c.activities.map((act, i) => <li key={i}>{act}</li>)}
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recursos</h5>
-                                        <ul className="list-disc pl-4 text-sm text-gray-700 mt-1 text-justify">
-                                            {c.resources.map((res, i) => <li key={i}>{res}</li>)}
-                                        </ul>
-                                    </div>
+                                <div>
+                                    <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recursos</h5>
+                                    <ul className="list-disc pl-4 text-sm text-gray-700 mt-1 text-justify">
+                                        {c.resources.map((res, i) => <li key={i}>{res}</li>)}
+                                    </ul>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
+                </div>
 
-                    <div className="mt-8 pt-6 border-t border-gray-200">
-                        <h3 className="font-semibold mb-2" style={{ color: activeColor }}>Avaliação Final Sugerida</h3>
-                        <FormattedText text={sequence.finalEvaluation} className="text-gray-700" />
-                    </div>
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h3 className="font-semibold mb-2" style={{ color: activeColor }}>Avaliação Final Sugerida</h3>
+                    <FormattedText text={sequence.finalEvaluation} className="text-gray-700" />
                 </div>
             </div>
         </div>

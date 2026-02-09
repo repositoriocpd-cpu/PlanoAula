@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+                setTimeout(() => reject(new Error('Profile fetch timeout')), 15000)
             );
 
             const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -79,10 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const failsafe = setTimeout(() => {
             if (loading) {
-                console.warn('Auth failsafe triggered after 8s - Forcing loading=false');
+                console.warn('Auth failsafe triggered after 20s - Forcing loading=false');
                 setLoading(false);
             }
-        }, 8000);
+        }, 20000);
 
         getSession();
 

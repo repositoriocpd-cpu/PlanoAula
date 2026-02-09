@@ -97,27 +97,27 @@ export function ReportViewer({ report, onBack, onDelete }: ReportViewerProps) {
                         </button>
                     )}
                 </div>
+            </div>
 
-                <div className="p-8 overflow-y-auto custom-scrollbar">
-                    <div className="text-center mb-8">
-                        <h1 className="text-2xl font-bold text-gray-800">Relatório Individual</h1>
-                        <h2 className="text-lg font-semibold mt-1" style={{ color: activeColor }}>{report.studentName}</h2>
-                        <p className="text-gray-500">{report.grade} • {report.period}</p>
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                <div className="text-center mb-8">
+                    <h1 className="text-2xl font-bold text-gray-800">Relatório Individual</h1>
+                    <h2 className="text-lg font-semibold mt-1" style={{ color: activeColor }}>{report.studentName}</h2>
+                    <p className="text-gray-500">{report.grade} • {report.period}</p>
+                </div>
+
+                <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed text-justify">
+                    <FormattedText text={report.content} />
+                </div>
+
+                <div className="mt-12 pt-8 border-t border-gray-200 flex justify-between">
+                    <div className="text-center w-1/3">
+                        <div className="border-b border-black h-8 mb-2"></div>
+                        <p className="text-xs text-gray-500">Assinatura do Professor(a)</p>
                     </div>
-
-                    <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed text-justify">
-                        <FormattedText text={report.content} />
-                    </div>
-
-                    <div className="mt-12 pt-8 border-t border-gray-200 flex justify-between">
-                        <div className="text-center w-1/3">
-                            <div className="border-b border-black h-8 mb-2"></div>
-                            <p className="text-xs text-gray-500">Assinatura do Professor(a)</p>
-                        </div>
-                        <div className="text-center w-1/3">
-                            <div className="border-b border-black h-8 mb-2"></div>
-                            <p className="text-xs text-gray-500">Coordenação Pedagógica</p>
-                        </div>
+                    <div className="text-center w-1/3">
+                        <div className="border-b border-black h-8 mb-2"></div>
+                        <p className="text-xs text-gray-500">Coordenação Pedagógica</p>
                     </div>
                 </div>
             </div>

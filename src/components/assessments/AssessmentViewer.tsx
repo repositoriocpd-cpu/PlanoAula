@@ -96,45 +96,45 @@ export function AssessmentViewer({ assessment, onBack, onDelete }: AssessmentVie
                         </button>
                     )}
                 </div>
+            </div>
 
-                <div className="p-8 overflow-y-auto custom-scrollbar">
-                    <h1 className="text-2xl font-bold mb-2" style={{ color: activeColor }}>{assessment.title}</h1>
-                    <p className="text-gray-600 mb-6">{assessment.type} • {assessment.discipline}</p>
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                <h1 className="text-2xl font-bold mb-2" style={{ color: activeColor }}>{assessment.title}</h1>
+                <p className="text-gray-600 mb-6">{assessment.type} • {assessment.discipline}</p>
 
-                    <div className="space-y-8">
-                        {assessment.questions && assessment.questions.map((q, index) => (
-                            <div key={q.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-justify">
-                                <h3 className="font-semibold text-gray-800 mb-3">{index + 1}. {q.text}</h3>
-                                {q.type === 'multiple_choice' && (
-                                    <ul className="space-y-2">
-                                        {q.options?.map((opt, i) => (
-                                            <li key={i} className="flex items-center text-gray-700">
-                                                <div className="h-4 w-4 rounded-full border border-gray-400 mr-2"></div>
-                                                {opt}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                                {q.type === 'essay' && (
-                                    <div className="h-24 border border-gray-300 rounded-md bg-white mt-2"></div>
-                                )}
-                            </div>
-                        ))}
-
-                        {assessment.rubric && assessment.rubric.map((c, index) => (
-                            <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <h3 className="font-bold text-gray-800 mb-3 border-b pb-2">{c.criteria}</h3>
-                                <div className="grid grid-cols-1 gap-2">
-                                    {c.levels.map((l, i) => (
-                                        <div key={i} className="flex flex-col sm:flex-row sm:items-baseline">
-                                            <span className="font-semibold min-w-[100px]" style={{ color: activeColor }}>{l.level}:</span>
-                                            <span className="text-gray-600 text-sm text-justify">{l.description}</span>
-                                        </div>
+                <div className="space-y-8">
+                    {assessment.questions && assessment.questions.map((q, index) => (
+                        <div key={q.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-justify">
+                            <h3 className="font-semibold text-gray-800 mb-3">{index + 1}. {q.text}</h3>
+                            {q.type === 'multiple_choice' && (
+                                <ul className="space-y-2">
+                                    {q.options?.map((opt, i) => (
+                                        <li key={i} className="flex items-center text-gray-700">
+                                            <div className="h-4 w-4 rounded-full border border-gray-400 mr-2"></div>
+                                            {opt}
+                                        </li>
                                     ))}
-                                </div>
+                                </ul>
+                            )}
+                            {q.type === 'essay' && (
+                                <div className="h-24 border border-gray-300 rounded-md bg-white mt-2"></div>
+                            )}
+                        </div>
+                    ))}
+
+                    {assessment.rubric && assessment.rubric.map((c, index) => (
+                        <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h3 className="font-bold text-gray-800 mb-3 border-b pb-2">{c.criteria}</h3>
+                            <div className="grid grid-cols-1 gap-2">
+                                {c.levels.map((l, i) => (
+                                    <div key={i} className="flex flex-col sm:flex-row sm:items-baseline">
+                                        <span className="font-semibold min-w-[100px]" style={{ color: activeColor }}>{l.level}:</span>
+                                        <span className="text-gray-600 text-sm text-justify">{l.description}</span>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
