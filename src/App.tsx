@@ -34,6 +34,24 @@ function PrivateRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-10 h-10 text-purple-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (profile?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 import { isConfigured } from './services/supabase';
 
 function App() {
@@ -91,7 +109,11 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="library" element={<Library />} />
               <Route path="library/bncc-info" element={<BNCCInfo />} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="settings" element={
+                <AdminRoute>
+                  <Settings />
+                </AdminRoute>
+              } />
             </Route>
           </Routes>
         </AuthProvider>

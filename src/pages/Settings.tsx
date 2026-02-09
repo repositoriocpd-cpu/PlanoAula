@@ -20,6 +20,7 @@ import type { Profile, SchoolSettings, SystemLog } from '../types/settings';
 
 import { createClient } from '@supabase/supabase-js';
 import { supabase, isConfigured } from '../services/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 // Mock Data
 const MOCK_LOGS: SystemLog[] = [
@@ -378,7 +379,32 @@ function ChangePasswordModal({ isOpen, onClose, user }: ChangePasswordModalProps
 }
 
 export function Settings() {
+    const { profile } = useAuth();
     const [activeTab, setActiveTab] = useState<'users' | 'school' | 'logs' | 'backup' | 'about'>('users');
+
+    if (profile?.role !== 'admin') {
+        return (
+            <div className="h-full flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-600 mb-6">
+                    <Shield className="w-10 h-10" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+                <p className="text-gray-500 max-w-sm mx-auto">
+                    Apenas administradores do sistema podem acessar este módulo.
+                    Se você acredita que deveria ter acesso, entre em contato com o suporte.
+                </p>
+                <div className="mt-8">
+                    <button
+                        onClick={() => window.history.back()}
+                        className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition shadow-lg shadow-gray-200"
+                    >
+                        Voltar para o Início
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [school, setSchool] = useState<SchoolSettings>(MOCK_SCHOOL);
     const [logs] = useState(MOCK_LOGS);
