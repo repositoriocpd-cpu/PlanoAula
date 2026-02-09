@@ -8,7 +8,8 @@ import {
     Library,
     LogOut,
     Home,
-    Settings
+    Settings,
+    X
 } from 'lucide-react';
 
 const navigation = [
@@ -25,67 +26,96 @@ const navigation = [
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-export function Sidebar() {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { signOut } = useAuth();
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
-        console.log('Sidebar: handleSignOut triggered');
         try {
             await signOut();
-            console.log('Sidebar: signOut successful, navigating to login...');
             navigate('/login', { replace: true });
         } catch (error) {
-            console.error('Sidebar: Error signing out:', error);
-            // Even on error, try to redirect if the state might be inconsistent
             navigate('/login', { replace: true });
         }
     };
 
     return (
-        <div className="flex flex-col w-64 bg-white border-r border-gray-100 h-full shadow-sm z-10">
-            <div className="flex flex-col items-center justify-center h-28 border-b border-gray-50/50">
-                <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 tracking-tight text-center px-2">
-                    PlanejaEdu
-                </h1>
-                <span className="text-xs font-bold text-gray-400 mt-1 tracking-[0.2em] uppercase">SMEDU</span>
+        <>
+            {/* Mobile Overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[150] md:hidden transition-opacity duration-300"
+                    onClick={onClose}
+                />
+            )}
+
+            <div className={`
+                fixed inset-y-0 left-0 w-72 bg-white/95 backdrop-blur-xl border-r border-gray-100 h-full shadow-2xl z-[200] 
+                transition-transform duration-500 ease-in-out md:static md:translate-x-0 md:shadow-sm
+                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}>
+                <div className="flex flex-col h-full">
+                    <div className="flex items-center justify-between h-28 px-8 border-b border-gray-50/50">
+                        <div className="flex flex-col">
+                            <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 tracking-tight">
+                                PlanejaEdu
+                            </h1>
+                            <span className="text-[10px] font-black text-gray-300 tracking-[0.3em] uppercase">Gestão Pedagógica</span>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="md:hidden p-2 hover:bg-gray-100 rounded-full text-gray-400"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <nav className="flex-1 overflow-y-auto py-8 custom-scrollbar">
+                        <ul className="space-y-2 px-4">
+                            {navigation.map((item) => (
+                                <li key={item.name}>
+                                    <NavLink
+                                        to={item.href}
+                                        onClick={onClose}
+                                        className={({ isActive }) =>
+                                            `flex items-center px-5 py-3.5 text-sm font-bold rounded-[20px] transition-all duration-300 group ${isActive
+                                                ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
+                                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
+                                            }`
+                                        }
+                                    >
+                                        {({ isActive }) => (
+                                            <>
+                                                <item.icon className={`mr-4 h-5 w-5 transition-transform duration-300 ${isActive ? 'text-white' : `${item.color} group-hover:scale-110`}`} />
+                                                <span className="flex-1">{item.name}</span>
+                                                {isActive && <ChevronRight size={14} className="opacity-60" />}
+                                            </>
+                                        )}
+                                    </NavLink>
+                                </li>
+                            ))}
+                        </ul>
+                    </nav>
+
+                    <div className="p-6 border-t border-gray-50 bg-gray-50/30">
+                        <button
+                            onClick={handleSignOut}
+                            className="flex items-center justify-center w-full px-5 py-4 text-sm font-black text-white bg-gray-900 hover:bg-black rounded-2xl shadow-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95"
+                        >
+                            <LogOut className="mr-3 h-5 w-5 text-rose-500" />
+                            Sair do Sistema
+                        </button>
+                    </div>
+                </div>
             </div>
-            <nav className="flex-1 overflow-y-auto py-6 custom-scrollbar">
-                <ul className="space-y-1.5 px-3">
-                    {navigation.map((item) => (
-                        <li key={item.name}>
-                            <NavLink
-                                to={item.href}
-                                className={({ isActive }) =>
-                                    `flex items-center px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-300 group ${isActive
-                                        ? 'bg-primary/10 text-primary shadow-sm backdrop-blur-md border border-primary/10'
-                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                                    }`
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <item.icon className={`mr-3 h-5 w-5 transition-colors duration-300 ${isActive ? 'text-primary' : `${item.color} opacity-70 group-hover:opacity-100`}`} />
-                                        <span className="relative">
-                                            {item.name}
-                                            {isActive && <span className="absolute -right-3 top-1/2 -translate-y-1/2 w-1 h-1 bg-primary rounded-full" />}
-                                        </span>
-                                    </>
-                                )}
-                            </NavLink>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
-            <div className="p-4 border-t border-gray-50">
-                <button
-                    onClick={handleSignOut}
-                    className="flex items-center justify-center w-full px-4 py-3.5 text-sm font-bold text-white bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 hover:from-red-600 hover:via-rose-600 hover:to-pink-600 rounded-2xl shadow-lg shadow-rose-200 hover:shadow-rose-300 transition-all duration-300 transform hover:-translate-y-1 active:scale-95"
-                >
-                    <LogOut className="mr-2 h-5 w-5" />
-                    Sair do Sistema
-                </button>
-            </div>
-        </div>
+        </>
     );
 }
+
+// Help with missing ChevronRight in original code
+import { ChevronRight } from 'lucide-react';
