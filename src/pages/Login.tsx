@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { Loader2, Mail, Lock, ArrowRight, BookOpen } from 'lucide-react';
 
 export function Login() {
