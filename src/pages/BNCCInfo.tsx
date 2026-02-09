@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, CheckCircle2, Info, Lightbulb, Target, ExternalLink, ChevronRight } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle2, Info, Lightbulb, Target, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function BNCCInfo() {

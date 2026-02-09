@@ -859,6 +859,7 @@ export const exportReportToPDF = (report: AppReport, doc?: jsPDF, startY = 30) =
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
     let y = startY;
+    const [r, g, b] = [124, 58, 237]; // Default Primary Color
 
     if (!doc) {
         internalDoc.setFillColor(r, g, b);
