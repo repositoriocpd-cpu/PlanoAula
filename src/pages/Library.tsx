@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Filter, FileText, Video, Globe, Image as ImageIcon, ExternalLink, X } from 'lucide-react';
 import { MOCK_RESOURCES } from '../types/library';
 import type { Resource } from '../types/library';

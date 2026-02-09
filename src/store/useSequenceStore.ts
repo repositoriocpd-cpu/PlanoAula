@@ -10,7 +10,7 @@ interface SequenceStore {
     removeSequence: (id: string) => Promise<void>;
 }
 
-export const useSequenceStore = create<SequenceStore>((set, get) => ({
+export const useSequenceStore = create<SequenceStore>((set) => ({
     sequences: [],
     isLoading: false,
 

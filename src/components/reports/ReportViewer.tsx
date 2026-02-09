@@ -1,4 +1,3 @@
-import React from 'react';
 import { FormattedText } from '../ui/FormattedText';
 import { Download, ArrowLeft } from 'lucide-react';
 import type { Report } from '../../types/report';

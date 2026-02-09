@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, Trash2 } from 'lucide-react';
 import type { DidacticSequence } from '../../types/sequence';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, Trash2 } from 'lucide-react';
 import type { Assessment } from '../../types/assessment';
 
@@ -32,9 +31,9 @@ export function AssessmentList({ assessments, onSelect, onDelete }: AssessmentLi
                             </h3>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${assessment.type === 'Prova' ? 'bg-red-100 text-red-700' :
-                                        assessment.type === 'Atividade' ? 'bg-blue-100 text-blue-700' :
-                                            assessment.type === 'Rubrica' ? 'bg-purple-100 text-purple-700' :
-                                                'bg-green-100 text-green-700'
+                                    assessment.type === 'Atividade' ? 'bg-blue-100 text-blue-700' :
+                                        assessment.type === 'Rubrica' ? 'bg-purple-100 text-purple-700' :
+                                            'bg-green-100 text-green-700'
                                     }`}>
                                     {assessment.type}
                                 </span>

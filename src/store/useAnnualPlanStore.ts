@@ -10,7 +10,7 @@ interface AnnualPlanStore {
     removePlan: (id: string) => Promise<void>;
 }
 
-export const useAnnualPlanStore = create<AnnualPlanStore>((set, get) => ({
+export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
     plans: [],
     isLoading: false,
 

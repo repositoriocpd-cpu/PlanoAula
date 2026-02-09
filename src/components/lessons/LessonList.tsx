@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, Clock, ChevronRight } from 'lucide-react';
 import type { LessonPlan } from '../../types/lesson';
 

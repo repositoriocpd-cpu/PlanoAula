@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ReportForm } from '../components/reports/ReportForm';
 import { ReportViewer } from '../components/reports/ReportViewer';
 import { generateReport } from '../services/aiGenerator';
@@ -8,12 +8,12 @@ import { ReportList } from '../components/reports/ReportList';
 import { useReportStore } from '../store/useReportStore';
 
 export function Reports() {
-    const { reports, addReport, removeReport, fetchReports, isLoading: isStoreLoading } = useReportStore();
+    const { reports, addReport, removeReport, fetchReports } = useReportStore();
     const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         fetchReports();
     }, [fetchReports]);
 

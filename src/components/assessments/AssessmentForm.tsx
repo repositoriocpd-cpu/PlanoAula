@@ -1,9 +1,8 @@
-import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, FileCheck, BookOpen, GraduationCap, FileQuestion, AlignLeft, Wand2 } from 'lucide-react';
-import type { AssessmentFormData, AssessmentType } from '../../types/assessment';
+import type { AssessmentFormData } from '../../types/assessment';
 
 const schema = z.object({
     discipline: z.string().min(2, 'Disciplina é obrigatória'),

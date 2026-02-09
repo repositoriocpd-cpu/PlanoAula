@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AssessmentForm } from '../components/assessments/AssessmentForm';
 import { AssessmentViewer } from '../components/assessments/AssessmentViewer';
 import { generateAssessment } from '../services/aiGenerator';
@@ -8,12 +8,12 @@ import { AssessmentList } from '../components/assessments/AssessmentList';
 import { useAssessmentStore } from '../store/useAssessmentStore';
 
 export function Assessments() {
-    const { assessments, addAssessment, removeAssessment, fetchAssessments, isLoading: isStoreLoading } = useAssessmentStore();
+    const { assessments, addAssessment, removeAssessment, fetchAssessments } = useAssessmentStore();
     const [currentAssessment, setCurrentAssessment] = useState<AssessmentType | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         fetchAssessments();
     }, [fetchAssessments]);
 

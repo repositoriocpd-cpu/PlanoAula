@@ -10,7 +10,7 @@ interface ReportStore {
     removeReport: (id: string) => Promise<void>;
 }
 
-export const useReportStore = create<ReportStore>((set, get) => ({
+export const useReportStore = create<ReportStore>((set) => ({
     reports: [],
     isLoading: false,
 

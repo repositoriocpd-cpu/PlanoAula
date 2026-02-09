@@ -1,4 +1,3 @@
-import React from 'react';
 import { Download, ArrowLeft } from 'lucide-react';
 import type { Assessment } from '../../types/assessment';
 import { jsPDF } from 'jspdf';

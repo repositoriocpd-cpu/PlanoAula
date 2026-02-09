@@ -10,7 +10,7 @@ interface AssessmentStore {
     removeAssessment: (id: string) => Promise<void>;
 }
 
-export const useAssessmentStore = create<AssessmentStore>((set, get) => ({
+export const useAssessmentStore = create<AssessmentStore>((set) => ({
     assessments: [],
     isLoading: false,
 
