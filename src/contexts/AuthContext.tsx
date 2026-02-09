@@ -68,9 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         const failsafe = setTimeout(() => {
-            console.warn('Auth failsafe triggered after 5s');
-            setLoading(false);
-        }, 5000);
+            if (loading) {
+                console.warn('Auth failsafe triggered after 8s - Forcing loading=false');
+                setLoading(false);
+            }
+        }, 8000);
 
         getSession();
 

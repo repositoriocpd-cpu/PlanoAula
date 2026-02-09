@@ -16,13 +16,26 @@ export function Login() {
         setError(null);
 
         try {
-            const { error: authError } = await supabase.auth.signInWithPassword({
+            console.log('Attempting login for:', email);
+
+            // Add a timeout to the login request
+            const loginPromise = supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
-            if (authError) throw authError;
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Tempo limite de conexão excedido. Verifique sua internet.')), 15000)
+            );
 
+            const { error: authError } = await Promise.race([loginPromise, timeoutPromise]) as any;
+
+            if (authError) {
+                console.error('Auth error returned:', authError);
+                throw authError;
+            }
+
+            console.log('Login successful, navigating...');
             navigate('/');
         } catch (err: any) {
             console.error('Login error:', err);
