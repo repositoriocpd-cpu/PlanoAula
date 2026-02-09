@@ -13,6 +13,7 @@ import { Login } from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { InstallBanner } from './components/InstallBanner';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -37,6 +38,7 @@ function App() {
     <ErrorBoundary>
       <Router>
         <AuthProvider>
+          <InstallBanner />
           <Routes>
             <Route path="/login" element={<Login />} />
 
