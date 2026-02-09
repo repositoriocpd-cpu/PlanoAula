@@ -39,7 +39,7 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
                 throw error;
             }
 
-            const formattedPlans: LessonPlan[] = (data || []).map(item => ({
+            const formattedLessons: LessonPlan[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 title: item.title,
@@ -53,7 +53,7 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
                 content: item.content
             }));
 
-            set({ plans: formattedPlans });
+            set({ plans: formattedLessons });
         } catch (error) {
             console.error('Error fetching lesson plans catch block:', error);
         } finally {

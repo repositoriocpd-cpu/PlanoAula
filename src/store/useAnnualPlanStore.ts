@@ -40,7 +40,7 @@ export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
 
             console.log('Fetched plans count:', data?.length || 0);
 
-            const formattedPlans: AnnualPlan[] = (data || []).map(item => ({
+            const formattedPlans: AnnualPlan[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 discipline: item.discipline,

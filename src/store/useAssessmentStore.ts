@@ -38,7 +38,7 @@ export const useAssessmentStore = create<AssessmentStore>((set) => ({
                 throw error;
             }
 
-            const formattedAssessments: Assessment[] = (data || []).map(item => ({
+            const formattedAssessments: Assessment[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 title: item.title,

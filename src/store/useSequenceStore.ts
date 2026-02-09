@@ -38,7 +38,7 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
                 throw error;
             }
 
-            const formattedSequences: DidacticSequence[] = (data || []).map(item => ({
+            const formattedSequences: DidacticSequence[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 theme: item.theme,

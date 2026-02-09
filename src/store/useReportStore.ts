@@ -38,7 +38,7 @@ export const useReportStore = create<ReportStore>((set) => ({
                 throw error;
             }
 
-            const formattedReports: Report[] = (data || []).map(item => ({
+            const formattedReports: Report[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 studentName: item.student_name,
