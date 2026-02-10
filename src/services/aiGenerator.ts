@@ -17,7 +17,7 @@ const getGenAI = () => {
 
 export async function generateLessonPlan(data: LessonPlanFormData): Promise<LessonPlan> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `
     Como um especialista pedagógico, crie um Plano de Aula EXCELENTE e completo, estritamente alinhado à Base Nacional Comum Curricular (BNCC).
@@ -83,7 +83,7 @@ export async function generateLessonPlan(data: LessonPlanFormData): Promise<Less
 
 export async function generateAnnualPlan(data: AnnualPlanFormData): Promise<AnnualPlan> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const isInfantil = data.grade === 'Educação Infantil';
 
@@ -161,7 +161,7 @@ export async function generateAnnualPlan(data: AnnualPlanFormData): Promise<Annu
 
 export async function generateDidacticSequence(data: SequenceFormData): Promise<DidacticSequence> {
   const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `
     Crie uma Sequência Didática alinhada à BNCC sobre:

@@ -14,7 +14,7 @@ export const presentationService = {
         duration: 5 | 10 | 15,
         baseContext: string
     }): Promise<Presentation['content_json']> {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
         const systemPrompt = `Você é um gerador de apresentações didáticas premium para professores.
         Gere uma apresentação em formato JSON seguindo EXATAMENTE este modelo:
