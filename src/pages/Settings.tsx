@@ -19,7 +19,7 @@ import {
 import type { Profile, SchoolSettings, SystemLog } from '../types/settings';
 
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from '../services/supabase';
+import { supabase, isConfigured } from '../services/supabase';
 
 // Mock Data
 const MOCK_LOGS: SystemLog[] = [
@@ -39,15 +39,17 @@ const MOCK_SCHOOL: SchoolSettings = {
 };
 
 // Temporary client for creating users without logging out
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const URL = import.meta.env.VITE_SUPABASE_URL;
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const createUserClient = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-        persistSession: false, // Don't persist session to avoid overwriting current user
-        autoRefreshToken: false,
-    }
-});
+const createUserClient = isConfigured
+    ? createClient(URL, KEY, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        }
+    })
+    : null;
 
 interface CreateUserModalProps {
     isOpen: boolean;
@@ -70,6 +72,9 @@ function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalProps) {
         e.preventDefault();
         setIsLoading(true);
         try {
+            if (!createUserClient) {
+                throw new Error('Supabase não está configurado corretamente.');
+            }
             const { error: signUpError } = await createUserClient.auth.signUp({
                 email: formData.email,
                 password: formData.password,

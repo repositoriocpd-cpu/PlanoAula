@@ -34,7 +34,40 @@ function PrivateRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+import { isConfigured } from './services/supabase';
+
 function App() {
+  if (!isConfigured) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-4 text-center">
+        <div className="max-w-md p-8 bg-white rounded-2xl shadow-xl border border-red-100">
+          <div className="flex justify-center mb-6">
+            <div className="p-3 bg-red-100 rounded-full">
+              <Loader2 className="w-8 h-8 text-red-600" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Configuração Necessária</h1>
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            O sistema está rodando, mas não encontrou as chaves do Supabase.
+            Por favor, verifique o arquivo <code className="bg-gray-100 px-2 py-1 rounded">.env</code> na raiz do projeto e insira as credenciais reais.
+          </p>
+          <div className="bg-amber-50 rounded-lg p-4 text-left border border-amber-100 mb-6">
+            <p className="text-sm text-amber-800 font-medium mb-2">Variáveis faltantes:</p>
+            <ul className="text-xs text-amber-700 space-y-1 font-mono">
+              <li>VITE_SUPABASE_URL</li>
+              <li>VITE_SUPABASE_ANON_KEY</li>
+            </ul>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-purple-200"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <ErrorBoundary>
       <Router>
