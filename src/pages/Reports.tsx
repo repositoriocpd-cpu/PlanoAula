@@ -9,6 +9,10 @@ import { useReportStore } from '../store/useReportStore';
 import { exportReportToPDF, exportReportsToWord } from '../services/exportService';
 import { jsPDF } from 'jspdf';
 import { useAuth } from '../contexts/AuthContext';
+import { PedagogicalResourcesPanel } from '../components/pedagogical/PedagogicalResourcesPanel';
+import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
+import { generatePedagogicalResource } from '../services/resourceGenerator';
+import type { ResourceType } from '../types/resources';
 
 export function Reports() {
     const { user } = useAuth();
@@ -18,6 +22,11 @@ export function Reports() {
 
     const currentReport = reports.find(r => r.id === selectedReportId) || null;
     const [error, setError] = useState<string | null>(null);
+
+    // Resource State
+    const [generatingResourceType, setGeneratingResourceType] = useState<ResourceType | null>(null);
+    const [viewerResource, setViewerResource] = useState<{ title: string, content: string, type: string } | null>(null);
+    const { updateResources } = useReportStore();
 
     useEffect(() => {
         fetchReports();
@@ -36,9 +45,49 @@ export function Reports() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar relatório.';
             setError(`Erro: ${errorMessage}`);
-            console.error('Report generation error:', err);
+            alert(`Erro ao salvar no banco de dados: ${errorMessage}`);
+            console.error('Report generation/save error:', err);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateResource = async (type: ResourceType) => {
+        if (!currentReport) return;
+
+        if (currentReport.generatedResources?.[type]) {
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content: currentReport.generatedResources[type].content,
+                type
+            });
+            return;
+        }
+
+        setGeneratingResourceType(type);
+        try {
+            const content = await generatePedagogicalResource(type, currentReport);
+            const newResources = {
+                ...(currentReport.generatedResources || {}),
+                [type]: {
+                    type,
+                    content,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await updateResources(currentReport.id, newResources);
+
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content,
+                type
+            });
+        } catch (err) {
+            console.error('Error generating resource:', err);
+            alert('Erro ao gerar recurso pedagógico.');
+        } finally {
+            setGeneratingResourceType(null);
         }
     };
 
@@ -94,11 +143,18 @@ export function Reports() {
                     )}
 
                     {currentReport ? (
-                        <ReportViewer
-                            report={currentReport}
-                            onBack={() => setSelectedReportId(null)}
-                            onDelete={handleDelete}
-                        />
+                        <>
+                            <ReportViewer
+                                report={currentReport}
+                                onBack={() => setSelectedReportId(null)}
+                                onDelete={handleDelete}
+                            />
+                            <PedagogicalResourcesPanel
+                                onGenerate={handleGenerateResource}
+                                generatingType={generatingResourceType}
+                                existingResources={currentReport.generatedResources}
+                            />
+                        </>
                     ) : (
                         <div className="max-w-2xl mx-auto">
                             <ReportForm onSubmit={handleGenerate} isLoading={isGenerating} />
@@ -146,6 +202,16 @@ export function Reports() {
                     </div>
                 </div>
             </div>
+
+            {viewerResource && (
+                <ResourceViewerModal
+                    isOpen={!!viewerResource}
+                    onClose={() => setViewerResource(null)}
+                    title={viewerResource.title}
+                    content={viewerResource.content}
+                    type={viewerResource.type}
+                />
+            )}
         </div>
     );
 }

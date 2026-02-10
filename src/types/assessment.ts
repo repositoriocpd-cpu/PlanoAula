@@ -1,3 +1,5 @@
+import type { ResourceData } from './resources';
+
 export type AssessmentType = 'Prova' | 'Atividade' | 'Rubrica' | 'Diagnóstica';
 
 export interface Assessment {
@@ -13,6 +15,7 @@ export interface Assessment {
 
     questions?: Question[];
     rubric?: RubricCriteria[];
+    generatedResources?: ResourceData;
 }
 
 export interface Question {

@@ -9,6 +9,7 @@ interface ReportStore {
     addReport: (report: Report) => Promise<void>;
     removeReport: (id: string) => Promise<void>;
     updateHeaderColor: (id: string, color: string) => Promise<void>;
+    updateResources: (id: string, resources: any) => Promise<void>;
 }
 
 export const useReportStore = create<ReportStore>((set) => ({
@@ -38,7 +39,7 @@ export const useReportStore = create<ReportStore>((set) => ({
                 throw error;
             }
 
-            const formattedReports: Report[] = (data || []).map(item => ({
+            const formattedReports: Report[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 studentName: item.student_name,
@@ -46,7 +47,8 @@ export const useReportStore = create<ReportStore>((set) => ({
                 period: item.period,
                 content: item.content,
                 createdAt: item.created_at,
-                headerColor: item.header_color
+                headerColor: item.header_color,
+                generatedResources: item.generated_resources || {}
             }));
 
             set({ reports: formattedReports });
@@ -115,6 +117,25 @@ export const useReportStore = create<ReportStore>((set) => ({
             if (error) throw error;
         } catch (error) {
             console.error('Error updating header color:', error);
+        }
+    },
+
+    updateResources: async (id, resources) => {
+        set((state) => ({
+            reports: state.reports.map((r) =>
+                r.id === id ? { ...r, generatedResources: resources } : r
+            )
+        }));
+        try {
+            const { error } = await supabase
+                .from('reports')
+                .update({ generated_resources: resources })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating report resources:', error);
+            throw error;
         }
     }
 }));

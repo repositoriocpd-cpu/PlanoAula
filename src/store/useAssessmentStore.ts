@@ -9,6 +9,7 @@ interface AssessmentStore {
     addAssessment: (assessment: Assessment) => Promise<void>;
     removeAssessment: (id: string) => Promise<void>;
     updateHeaderColor: (id: string, color: string) => Promise<void>;
+    updateResources: (id: string, resources: any) => Promise<void>;
 }
 
 export const useAssessmentStore = create<AssessmentStore>((set) => ({
@@ -38,7 +39,7 @@ export const useAssessmentStore = create<AssessmentStore>((set) => ({
                 throw error;
             }
 
-            const formattedAssessments: Assessment[] = (data || []).map(item => ({
+            const formattedAssessments: Assessment[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 title: item.title,
@@ -49,7 +50,8 @@ export const useAssessmentStore = create<AssessmentStore>((set) => ({
                 createdAt: item.created_at,
                 questions: item.questions,
                 rubric: item.rubric,
-                headerColor: item.header_color
+                headerColor: item.header_color,
+                generatedResources: item.generated_resources || {}
             }));
 
             set({ assessments: formattedAssessments });
@@ -121,6 +123,25 @@ export const useAssessmentStore = create<AssessmentStore>((set) => ({
             if (error) throw error;
         } catch (error) {
             console.error('Error updating header color:', error);
+        }
+    },
+
+    updateResources: async (id, resources) => {
+        set((state) => ({
+            assessments: state.assessments.map((a) =>
+                a.id === id ? { ...a, generatedResources: resources } : a
+            )
+        }));
+        try {
+            const { error } = await supabase
+                .from('assessments')
+                .update({ generated_resources: resources })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating assessment resources:', error);
+            throw error;
         }
     }
 }));

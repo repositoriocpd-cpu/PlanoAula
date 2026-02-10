@@ -1,3 +1,5 @@
+import type { ResourceData } from './resources';
+
 export interface LessonPlan {
     id: string;
     userId?: string;
@@ -23,6 +25,7 @@ export interface LessonPlan {
         adaptations: string; // Adaptações (educação inclusiva)
         homework: string; // Atividades de Casa
     } | null;
+    generatedResources?: ResourceData;
 }
 
 export type LessonPlanFormData = Pick<LessonPlan, 'discipline' | 'grade' | 'theme' | 'duration' | 'context'>;

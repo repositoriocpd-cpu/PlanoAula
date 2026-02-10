@@ -9,6 +9,13 @@ import { useAnnualPlanStore } from '../store/useAnnualPlanStore';
 import type { AnnualPlanFormData } from '../types/annualPlan';
 import { exportAnnualPlanToPDF, exportAnnualPlansToWord } from '../services/exportService';
 import { useAuth } from '../contexts/AuthContext';
+import { PedagogicalResourcesPanel } from '../components/pedagogical/PedagogicalResourcesPanel';
+import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
+import { generatePedagogicalResource } from '../services/resourceGenerator';
+import type { ResourceType } from '../types/resources';
+import { PresentationGeneratorModal } from '../components/presentation/PresentationGeneratorModal';
+import { PresentationViewer } from '../components/presentation/PresentationViewer';
+import type { Presentation } from '../types/presentation';
 
 export function AnnualPlan() {
     const { user } = useAuth();
@@ -16,8 +23,17 @@ export function AnnualPlan() {
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
+    // AI Presentation State
+    const [isPresentationModalOpen, setIsPresentationModalOpen] = useState(false);
+    const [currentPresentation, setCurrentPresentation] = useState<Presentation | null>(null);
+
     const currentPlan = plans.find(p => p.id === selectedPlanId) || null;
     const [error, setError] = useState<string | null>(null);
+
+    // Resource State
+    const [generatingResourceType, setGeneratingResourceType] = useState<ResourceType | null>(null);
+    const [viewerResource, setViewerResource] = useState<{ title: string, content: string, type: string } | null>(null);
+    const { updateResources } = useAnnualPlanStore();
 
     React.useEffect(() => {
         fetchPlans();
@@ -36,9 +52,49 @@ export function AnnualPlan() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar planejamento.';
             setError(`Erro: ${errorMessage}`);
-            console.error('Annual plan generation error:', err);
+            alert(`Erro ao salvar no banco de dados: ${errorMessage}`);
+            console.error('Annual plan generation/save error:', err);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateResource = async (type: ResourceType) => {
+        if (!currentPlan) return;
+
+        if (currentPlan.generatedResources?.[type]) {
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content: currentPlan.generatedResources[type].content,
+                type
+            });
+            return;
+        }
+
+        setGeneratingResourceType(type);
+        try {
+            const content = await generatePedagogicalResource(type, currentPlan);
+            const newResources = {
+                ...(currentPlan.generatedResources || {}),
+                [type]: {
+                    type,
+                    content,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await updateResources(currentPlan.id, newResources);
+
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content,
+                type
+            });
+        } catch (err) {
+            console.error('Error generating resource:', err);
+            alert('Erro ao gerar recurso pedagógico.');
+        } finally {
+            setGeneratingResourceType(null);
         }
     };
 
@@ -94,11 +150,19 @@ export function AnnualPlan() {
                     )}
 
                     {currentPlan ? (
-                        <AnnualPlanViewer
-                            plan={currentPlan}
-                            onBack={() => setSelectedPlanId(null)}
-                            onDelete={handleDelete}
-                        />
+                        <>
+                            <AnnualPlanViewer
+                                plan={currentPlan}
+                                onBack={() => setSelectedPlanId(null)}
+                                onDelete={handleDelete}
+                                onOpenPresentation={() => setIsPresentationModalOpen(true)}
+                            />
+                            <PedagogicalResourcesPanel
+                                onGenerate={handleGenerateResource}
+                                generatingType={generatingResourceType}
+                                existingResources={currentPlan.generatedResources}
+                            />
+                        </>
                     ) : (
                         <div className="max-w-2xl mx-auto">
                             <AnnualPlanForm onSubmit={handleGenerate} isLoading={isGenerating} />
@@ -146,6 +210,47 @@ export function AnnualPlan() {
                     </div>
                 </div>
             </div>
+
+            {viewerResource && (
+                <ResourceViewerModal
+                    isOpen={!!viewerResource}
+                    onClose={() => setViewerResource(null)}
+                    title={viewerResource.title}
+                    content={viewerResource.content}
+                    type={viewerResource.type}
+                />
+            )}
+
+            {/* AI Slideshow Components */}
+            {currentPlan && (
+                <PresentationGeneratorModal
+                    isOpen={isPresentationModalOpen}
+                    onClose={() => setIsPresentationModalOpen(false)}
+                    initialData={{
+                        title: currentPlan.discipline,
+                        grade: currentPlan.grade,
+                        discipline: currentPlan.discipline,
+                        content: JSON.stringify(currentPlan.planType === 'infantil' ? currentPlan.infantilContent : currentPlan.bimesters)
+                    }}
+                    onGenerated={(content) => {
+                        setCurrentPresentation({
+                            title: currentPlan.discipline,
+                            grade: currentPlan.grade,
+                            discipline: currentPlan.discipline,
+                            theme: content.theme || 'clean-modern',
+                            duration_minutes: 15,
+                            content_json: content
+                        });
+                    }}
+                />
+            )}
+
+            {currentPresentation && (
+                <PresentationViewer
+                    presentation={currentPresentation}
+                    onClose={() => setCurrentPresentation(null)}
+                />
+            )}
         </div>
     );
 }

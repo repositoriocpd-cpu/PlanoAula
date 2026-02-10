@@ -1,3 +1,5 @@
+import type { ResourceData } from './resources';
+
 export interface AnnualPlan {
     id: string;
     userId?: string;
@@ -8,6 +10,7 @@ export interface AnnualPlan {
     headerColor?: string;
     bimesters?: Bimester[];
     infantilContent?: InfantilPlanContent;
+    generatedResources?: ResourceData;
 }
 
 export interface Bimester {

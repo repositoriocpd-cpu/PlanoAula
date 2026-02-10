@@ -9,6 +9,10 @@ import { useAssessmentStore } from '../store/useAssessmentStore';
 import { exportAssessmentToPDF, exportAssessmentsToWord } from '../services/exportService';
 import { jsPDF } from 'jspdf';
 import { useAuth } from '../contexts/AuthContext';
+import { PedagogicalResourcesPanel } from '../components/pedagogical/PedagogicalResourcesPanel';
+import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
+import { generatePedagogicalResource } from '../services/resourceGenerator';
+import type { ResourceType } from '../types/resources';
 
 export function Assessments() {
     const { user } = useAuth();
@@ -18,6 +22,11 @@ export function Assessments() {
 
     const currentAssessment = assessments.find(a => a.id === selectedAssessmentId) || null;
     const [error, setError] = useState<string | null>(null);
+
+    // Resource State
+    const [generatingResourceType, setGeneratingResourceType] = useState<ResourceType | null>(null);
+    const [viewerResource, setViewerResource] = useState<{ title: string, content: string, type: string } | null>(null);
+    const { updateResources } = useAssessmentStore();
 
     useEffect(() => {
         fetchAssessments();
@@ -36,9 +45,49 @@ export function Assessments() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar avaliação.';
             setError(`Erro: ${errorMessage}`);
-            console.error('Assessment generation error:', err);
+            alert(`Erro ao salvar no banco de dados: ${errorMessage}`);
+            console.error('Assessment generation/save error:', err);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateResource = async (type: ResourceType) => {
+        if (!currentAssessment) return;
+
+        if (currentAssessment.generatedResources?.[type]) {
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content: currentAssessment.generatedResources[type].content,
+                type
+            });
+            return;
+        }
+
+        setGeneratingResourceType(type);
+        try {
+            const content = await generatePedagogicalResource(type, currentAssessment);
+            const newResources = {
+                ...(currentAssessment.generatedResources || {}),
+                [type]: {
+                    type,
+                    content,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await updateResources(currentAssessment.id, newResources);
+
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content,
+                type
+            });
+        } catch (err) {
+            console.error('Error generating resource:', err);
+            alert('Erro ao gerar recurso pedagógico.');
+        } finally {
+            setGeneratingResourceType(null);
         }
     };
 
@@ -94,11 +143,18 @@ export function Assessments() {
                     )}
 
                     {currentAssessment ? (
-                        <AssessmentViewer
-                            assessment={currentAssessment}
-                            onBack={() => setSelectedAssessmentId(null)}
-                            onDelete={handleDelete}
-                        />
+                        <>
+                            <AssessmentViewer
+                                assessment={currentAssessment}
+                                onBack={() => setSelectedAssessmentId(null)}
+                                onDelete={handleDelete}
+                            />
+                            <PedagogicalResourcesPanel
+                                onGenerate={handleGenerateResource}
+                                generatingType={generatingResourceType}
+                                existingResources={currentAssessment.generatedResources}
+                            />
+                        </>
                     ) : (
                         <div className="max-w-2xl mx-auto">
                             <AssessmentForm onSubmit={handleGenerate} isLoading={isGenerating} />
@@ -146,6 +202,16 @@ export function Assessments() {
                     </div>
                 </div>
             </div>
+
+            {viewerResource && (
+                <ResourceViewerModal
+                    isOpen={!!viewerResource}
+                    onClose={() => setViewerResource(null)}
+                    title={viewerResource.title}
+                    content={viewerResource.content}
+                    type={viewerResource.type}
+                />
+            )}
         </div>
     );
 }

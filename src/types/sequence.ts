@@ -1,3 +1,5 @@
+import type { ResourceData } from './resources';
+
 export interface DidacticSequence {
     id: string;
     userId?: string;
@@ -9,6 +11,7 @@ export interface DidacticSequence {
     bnccSkills: string[];
     classes: ClassPlan[];
     finalEvaluation: string;
+    generatedResources?: ResourceData;
 }
 
 export interface ClassPlan {

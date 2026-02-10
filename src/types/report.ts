@@ -1,3 +1,5 @@
+import type { ResourceData } from './resources';
+
 export interface Report {
     id: string;
     userId?: string;
@@ -7,6 +9,7 @@ export interface Report {
     createdAt: string;
     headerColor?: string;
     content: string; // The full text of the report
+    generatedResources?: ResourceData;
 }
 
 export interface ReportFormData {

@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
+import pptxgen from 'pptxgenjs';
 import type { LessonPlan } from '../types/lesson';
 import type { AnnualPlan } from '../types/annualPlan';
 import type { DidacticSequence } from '../types/sequence';
@@ -931,4 +932,328 @@ export const exportReportsToWord = async (reports: AppReport[], filename = "Rela
     });
     const blob = await Packer.toBlob(doc);
     saveAs(blob, filename);
+};
+
+export const exportMarkdownToPDF = (title: string, markdown: string, filename: string) => {
+    const internalDoc = new jsPDF();
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+    let y = 30;
+
+    const addHeader = () => {
+        internalDoc.setFillColor(124, 58, 237);
+        internalDoc.rect(0, 0, pageWidth, 15, 'F');
+        internalDoc.setTextColor(255, 255, 255);
+        internalDoc.setFontSize(10);
+        internalDoc.setFont('helvetica', 'bold');
+        internalDoc.text('PLANEJAEDU - RECURSO PEDAGÓGICO', margin, 10);
+        internalDoc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
+        internalDoc.setTextColor(0);
+    };
+
+    addHeader();
+
+    const checkPageBreak = (height: number) => {
+        if (y + height > pageHeight - 20) {
+            internalDoc.addPage();
+            y = 20;
+            addHeader();
+        }
+    };
+
+    // Title
+    internalDoc.setFontSize(18);
+    internalDoc.setFont('helvetica', 'bold');
+    const titleLines = internalDoc.splitTextToSize(title, contentWidth);
+    internalDoc.text(titleLines, margin, y);
+    y += (titleLines.length * 8) + 10;
+
+    // Content
+    internalDoc.setFontSize(11);
+    internalDoc.setFont('helvetica', 'normal');
+
+    const lines = splitTextWithBold(internalDoc, markdown, contentWidth);
+    lines.forEach((line: string) => {
+        checkPageBreak(6);
+        const isEndOfParagraph = line.endsWith('\n');
+        const cleanLine = line.replace('\n', '');
+        y = renderJustifiedBoldText(internalDoc, cleanLine, margin, y, contentWidth, 11, isEndOfParagraph);
+        y += 2;
+    });
+
+    internalDoc.save(`${filename}.pdf`);
+};
+
+export const exportMarkdownToWord = async (title: string, markdown: string, filename: string) => {
+    const doc = new Document({
+        sections: [{
+            properties: {},
+            children: [
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: title, bold: true, size: 36, color: "7C3AED" }),
+                    ],
+                    spacing: { after: 400 }
+                }),
+                ...markdown.split('\n').map(line => new Paragraph({
+                    alignment: AlignmentType.JUSTIFIED,
+                    children: line.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
+                        if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
+                            const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
+                            return new TextRun({ text: content, bold: true, size: 22 });
+                        }
+                        return new TextRun({ text: part, size: 22 });
+                    }),
+                    spacing: { after: 200 }
+                }))
+            ]
+        }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `${filename}.docx`);
+};
+
+export const exportMarkdownToPPTX = async (title: string, markdown: string, filename: string) => {
+    const pptx = new pptxgen();
+    pptx.layout = 'LAYOUT_16x9';
+
+    // Helper to clean markers and avoid "Slide X"
+    const cleanContent = (text: string) => text
+        .replace(/\[TÍTULO DO SLIDE\]/i, '')
+        .replace(/\[KEYWORD:.*?\]/i, '')
+        .replace(/\[CONTEÚDO:\]/i, '')
+        .replace(/Slide\s+\d+:?/gi, '')
+        .replace(/\*\*|\*|#|\[|\]/g, '')
+        .trim();
+
+    // Helper to fetch images with fallbacks
+    const fetchImage = async (keywords: string): Promise<string | null> => {
+        const query = encodeURIComponent(keywords.replace(/\s+/g, ','));
+        // NOTE: Source Unsplash is often more reliable than LoremFlickr for specific keywords
+        const sources = [
+            `https://source.unsplash.com/featured/1200x800/?${query}`,
+            `https://loremflickr.com/1200/800/${query}`,
+            `https://picsum.photos/1200/800`
+        ];
+
+        for (const url of sources) {
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            } catch (e) {
+                console.warn(`Failed to fetch from ${url}`, e);
+            }
+        }
+        return null;
+    };
+
+    // Split by new delimiter or fallback
+    const slides = markdown.includes('---SPLIT---')
+        ? markdown.split('---SPLIT---')
+        : markdown.split(/(?:^|\n)Slide\s+\d+:?/i);
+
+    const processedSlides = slides.filter(s => s.trim().length > 10);
+
+    // 1. Cover Slide
+    const coverData = processedSlides[0] || markdown;
+    const coverTitle = cleanContent(coverData.split('\n')[0]) || title;
+    const coverSlide = pptx.addSlide();
+    coverSlide.background = { color: '0F172A' };
+
+    const coverImg = await fetchImage(coverTitle);
+    if (coverImg) {
+        coverSlide.addImage({ data: coverImg, x: 0, y: 0, w: '100%', h: '100%' });
+    }
+
+    coverSlide.addText('PlanejaEdu AI', {
+        x: '5%', y: '10%', fontSize: 14, color: 'A78BFA', bold: true, fontFace: 'Helvetica'
+    });
+
+    coverSlide.addText(coverTitle.toUpperCase(), {
+        x: '5%', y: '40%', w: '90%', fontSize: 54, color: 'FFFFFF', bold: true, align: 'center', fontFace: 'Helvetica'
+    });
+
+    // 2. Content Slides
+    for (let i = 1; i < processedSlides.length; i++) {
+        const rawContent = processedSlides[i];
+        const lines = rawContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        const slideTitle = cleanContent(lines[0] || 'Tópico');
+        const keywordMatch = rawContent.match(/KEYWORD:\s*([^\]\n]+)/i);
+        const keywords = keywordMatch ? keywordMatch[1] : slideTitle;
+
+        const contentLines = lines.slice(1)
+            .filter(l => !l.toLowerCase().includes('keyword:'))
+            .map(l => cleanContent(l));
+
+        const slideObj = pptx.addSlide();
+        const slideImg = await fetchImage(keywords);
+        const isEven = i % 2 === 0;
+
+        // Dynamic Font Scaling
+        const totalCharCount = contentLines.join('').length;
+        const fontSize = totalCharCount > 300 ? 12 : totalCharCount > 150 ? 14 : 18;
+
+        if (slideImg) {
+            if (isEven) {
+                // Layout: Image Left
+                slideObj.addImage({ data: slideImg, x: 0, y: 0, w: '45%', h: '100%' });
+                slideObj.addText(slideTitle.toUpperCase(), {
+                    x: '50%', y: '15%', w: '45%', fontSize: 28, color: '7C3AED', bold: true, fontFace: 'Helvetica'
+                });
+                slideObj.addText(contentLines.join('\n\n'), {
+                    x: '50%', y: '35%', w: '45%', h: '55%', fontSize: fontSize, color: '334155', valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica'
+                });
+            } else {
+                // Layout: Image Right
+                slideObj.addImage({ data: slideImg, x: '55%', y: 0, w: '45%', h: '100%' });
+                slideObj.addText(slideTitle.toUpperCase(), {
+                    x: '5%', y: '15%', w: '45%', fontSize: 28, color: '7C3AED', bold: true, fontFace: 'Helvetica'
+                });
+                slideObj.addText(contentLines.join('\n\n'), {
+                    x: '5%', y: '35%', w: '45%', h: '55%', fontSize: fontSize, color: '334155', valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica'
+                });
+            }
+        } else {
+            // Layout: Full centered
+            slideObj.addText(slideTitle.toUpperCase(), {
+                x: '5%', y: '15%', w: '90%', fontSize: 34, color: '7C3AED', bold: true, align: 'center', fontFace: 'Helvetica'
+            });
+            slideObj.addText(contentLines.join('\n\n'), {
+                x: '10%', y: '35%', w: '80%', h: '50%', fontSize: fontSize + 2, color: '334155', valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica', align: 'left'
+            });
+        }
+
+        // Branding
+        slideObj.addText('planejaedu.com.br', {
+            x: '5%', y: '92%', w: '90%', fontSize: 9, color: 'CBD5E1', align: 'right', fontFace: 'Helvetica'
+        });
+    }
+
+    await pptx.writeFile({ fileName: `${filename}.pptx` });
+};
+
+export const exportJSONToPPTX = async (presentation: any, filename: string) => {
+    const pptx = new pptxgen();
+    pptx.layout = 'LAYOUT_16x9';
+
+    const theme = presentation.theme;
+    const slides = presentation.content_json.slides;
+
+    const getColors = () => {
+        switch (theme) {
+            case 'kids-colorful': return { bg: 'FFFBEB', primary: 'B45309', secondary: 'F59E0B', text: '92400E' };
+            case 'institutional': return { bg: 'F8FAFC', primary: '1E3A8A', secondary: '2563EB', text: '0F172A' };
+            default: return { bg: 'FFFFFF', primary: '0F172A', secondary: '3B82F6', text: '475569' }; // Clean
+        }
+    };
+
+    const colors = getColors();
+
+    for (const slide of slides) {
+        const slideObj = pptx.addSlide();
+        slideObj.background = { color: colors.bg };
+
+        // Decorative Shapes based on theme
+        if (theme === 'kids-colorful') {
+            slideObj.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.5, fill: { color: colors.secondary } });
+            slideObj.addShape(pptx.ShapeType.ellipse, { x: -1, y: -1, w: 3, h: 3, fill: { color: colors.secondary, transparency: 80 } });
+        } else if (theme === 'institutional') {
+            slideObj.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 1, fill: { color: colors.primary } });
+            slideObj.addShape(pptx.ShapeType.rect, { x: 0, y: '90%', w: '100%', h: 0.1, fill: { color: colors.secondary } });
+        }
+
+        switch (slide.type) {
+            case 'title':
+                const titleY = theme === 'institutional' ? '45%' : '40%';
+                slideObj.addText(slide.headline.toUpperCase(), {
+                    x: '10%', y: titleY, w: '80%', fontSize: 44, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, align: 'center', fontFace: theme === 'kids-colorful' ? 'Arial' : 'Helvetica'
+                });
+                if (slide.subheadline) {
+                    slideObj.addText(slide.subheadline, {
+                        x: '10%', y: '58%', w: '80%', fontSize: 22, color: theme === 'institutional' ? '64748B' : colors.text, align: 'center', italic: true, fontFace: 'Helvetica'
+                    });
+                }
+                break;
+
+            case 'bullets':
+                slideObj.addText(slide.headline.toUpperCase(), {
+                    x: '5%', y: theme === 'institutional' ? '5%' : '10%', w: '90%', fontSize: 32, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, fontFace: 'Helvetica'
+                });
+                if (slide.bullets) {
+                    slideObj.addText(slide.bullets.join('\n\n'), {
+                        x: '10%', y: '30%', w: '80%', h: '60%', fontSize: 18, color: colors.text, valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica'
+                    });
+                }
+                break;
+
+            case 'image_caption':
+                slideObj.addText(slide.headline.toUpperCase(), {
+                    x: '5%', y: theme === 'institutional' ? '5%' : '10%', w: '40%', fontSize: 28, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, fontFace: 'Helvetica'
+                });
+
+                // Caption box
+                slideObj.addShape(pptx.ShapeType.rect, { x: '5%', y: '30%', w: '40%', h: '50%', fill: { color: 'F1F5F9' }, line: { color: colors.secondary, width: 1 } });
+                slideObj.addText(slide.caption || slide.subheadline || '', {
+                    x: '7%', y: '35%', w: '36%', h: '40%', fontSize: 16, color: colors.text, italic: true, valign: 'middle', align: 'center'
+                });
+
+                // Image
+                const imgUrl = slide.image_url || `https://source.unsplash.com/featured/800x600?education,${encodeURIComponent(slide.headline)}`;
+                slideObj.addImage({
+                    path: imgUrl,
+                    x: '50%', y: '15%', w: '45%', h: '70%',
+                    rounding: true
+                });
+                break;
+
+            case 'two_columns':
+                slideObj.addText(slide.headline.toUpperCase(), {
+                    x: '5%', y: theme === 'institutional' ? '5%' : '10%', w: '90%', fontSize: 28, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, fontFace: 'Helvetica'
+                });
+
+                if (slide.column_left) {
+                    slideObj.addShape(pptx.ShapeType.rect, { x: '5%', y: '25%', w: '42%', h: '65%', fill: { color: 'F8FAFC' }, line: { color: 'E2E8F0', width: 1 } });
+                    slideObj.addText(slide.column_left.join('\n\n'), {
+                        x: '7%', y: '30%', w: '38%', h: '55%', fontSize: 14, color: colors.text, valign: 'top', bullet: { indent: 15 }, fontFace: 'Helvetica'
+                    });
+                }
+                if (slide.column_right) {
+                    slideObj.addShape(pptx.ShapeType.rect, { x: '52%', y: '25%', w: '42%', h: '65%', fill: { color: 'F8FAFC' }, line: { color: 'E2E8F0', width: 1 } });
+                    slideObj.addText(slide.column_right.join('\n\n'), {
+                        x: '54%', y: '30%', w: '38%', h: '55%', fontSize: 14, color: colors.text, valign: 'top', bullet: { indent: 15 }, fontFace: 'Helvetica'
+                    });
+                }
+                break;
+
+            case 'summary':
+                slideObj.addText(slide.headline.toUpperCase(), {
+                    x: '10%', y: theme === 'institutional' ? '20%' : '15%', w: '80%', fontSize: 36, color: colors.primary, bold: true, align: 'center', fontFace: 'Helvetica'
+                });
+                if (slide.bullets) {
+                    slideObj.addText(slide.bullets.join('\n\n'), {
+                        x: '15%', y: '40%', w: '70%', h: '45%', fontSize: 18, color: colors.text, align: 'center', valign: 'top', fontFace: 'Helvetica',
+                        bullet: { type: 'number' }
+                    });
+                }
+                break;
+        }
+
+        // Branding
+        slideObj.addText('PlanejaEdu AI • Inteligência Pedagógica', {
+            x: '5%', y: '92%', w: '90%', fontSize: 9, color: '94A3B8', align: 'right', fontFace: 'Helvetica'
+        });
+    }
+
+    await pptx.writeFile({ fileName: `${filename}.pptx` });
 };

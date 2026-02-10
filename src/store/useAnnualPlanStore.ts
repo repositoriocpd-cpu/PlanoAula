@@ -9,6 +9,7 @@ interface AnnualPlanStore {
     addPlan: (plan: AnnualPlan) => Promise<void>;
     removePlan: (id: string) => Promise<void>;
     updatePlanColor: (id: string, color: string) => Promise<void>;
+    updateResources: (id: string, resources: any) => Promise<void>;
 }
 
 export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
@@ -40,7 +41,7 @@ export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
 
             console.log('Fetched plans count:', data?.length || 0);
 
-            const formattedPlans: AnnualPlan[] = (data || []).map(item => ({
+            const formattedPlans: AnnualPlan[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 discipline: item.discipline,
@@ -49,7 +50,8 @@ export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
                 planType: item.plan_type || 'fundamental',
                 headerColor: item.header_color,
                 bimesters: item.bimesters,
-                infantilContent: item.infantil_content
+                infantilContent: item.infantil_content,
+                generatedResources: item.generated_resources || {}
             }));
 
             set({ plans: formattedPlans });
@@ -121,6 +123,25 @@ export const useAnnualPlanStore = create<AnnualPlanStore>((set) => ({
             if (error) throw error;
         } catch (error) {
             console.error('Error updating plan color:', error);
+        }
+    },
+
+    updateResources: async (id, resources) => {
+        set((state) => ({
+            plans: state.plans.map((p) =>
+                p.id === id ? { ...p, generatedResources: resources } : p
+            )
+        }));
+        try {
+            const { error } = await supabase
+                .from('annual_plans')
+                .update({ generated_resources: resources })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating annual plan resources:', error);
+            throw error;
         }
     }
 }));

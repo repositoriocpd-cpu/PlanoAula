@@ -7,6 +7,7 @@ import { AnnualPlan } from './pages/AnnualPlan';
 import { DidacticSequence } from './pages/DidacticSequence';
 import { Assessments } from './pages/Assessments';
 import { Reports } from './pages/Reports';
+import { Resources } from './pages/Resources';
 import { Library } from './pages/Library';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
@@ -29,6 +30,24 @@ function PrivateRoute({ children }: { children: ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-10 h-10 text-purple-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (profile?.role !== 'admin') {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -68,6 +87,7 @@ function App() {
       </div>
     );
   }
+
   return (
     <ErrorBoundary>
       <Router>
@@ -88,9 +108,14 @@ function App() {
               <Route path="didactic-sequence" element={<DidacticSequence />} />
               <Route path="assessments" element={<Assessments />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="resources" element={<Resources />} />
               <Route path="library" element={<Library />} />
               <Route path="library/bncc-info" element={<BNCCInfo />} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="settings" element={
+                <AdminRoute>
+                  <Settings />
+                </AdminRoute>
+              } />
             </Route>
           </Routes>
         </AuthProvider>

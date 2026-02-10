@@ -9,6 +9,10 @@ import { useSequenceStore } from '../store/useSequenceStore';
 import type { SequenceFormData } from '../types/sequence';
 import { exportSequenceToPDF, exportSequencesToWord } from '../services/exportService';
 import { useAuth } from '../contexts/AuthContext';
+import { PedagogicalResourcesPanel } from '../components/pedagogical/PedagogicalResourcesPanel';
+import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
+import { generatePedagogicalResource } from '../services/resourceGenerator';
+import type { ResourceType } from '../types/resources';
 
 export function DidacticSequence() {
     const { user } = useAuth();
@@ -18,6 +22,11 @@ export function DidacticSequence() {
 
     const currentSequence = sequences.find(s => s.id === selectedSequenceId) || null;
     const [error, setError] = useState<string | null>(null);
+
+    // Resource State
+    const [generatingResourceType, setGeneratingResourceType] = useState<ResourceType | null>(null);
+    const [viewerResource, setViewerResource] = useState<{ title: string, content: string, type: string } | null>(null);
+    const { updateResources } = useSequenceStore();
 
     React.useEffect(() => {
         fetchSequences();
@@ -36,9 +45,49 @@ export function DidacticSequence() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar sequência.';
             setError(`Erro: ${errorMessage}`);
-            console.error('Sequence generation error:', err);
+            alert(`Erro ao salvar no banco de dados: ${errorMessage}`);
+            console.error('Sequence generation/save error:', err);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateResource = async (type: ResourceType) => {
+        if (!currentSequence) return;
+
+        if (currentSequence.generatedResources?.[type]) {
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content: currentSequence.generatedResources[type].content,
+                type
+            });
+            return;
+        }
+
+        setGeneratingResourceType(type);
+        try {
+            const content = await generatePedagogicalResource(type, currentSequence);
+            const newResources = {
+                ...(currentSequence.generatedResources || {}),
+                [type]: {
+                    type,
+                    content,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await updateResources(currentSequence.id, newResources);
+
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content,
+                type
+            });
+        } catch (err) {
+            console.error('Error generating resource:', err);
+            alert('Erro ao gerar recurso pedagógico.');
+        } finally {
+            setGeneratingResourceType(null);
         }
     };
 
@@ -95,11 +144,18 @@ export function DidacticSequence() {
                     )}
 
                     {currentSequence ? (
-                        <SequenceViewer
-                            sequence={currentSequence}
-                            onBack={() => setSelectedSequenceId(null)}
-                            onDelete={handleDelete}
-                        />
+                        <>
+                            <SequenceViewer
+                                sequence={currentSequence}
+                                onBack={() => setSelectedSequenceId(null)}
+                                onDelete={handleDelete}
+                            />
+                            <PedagogicalResourcesPanel
+                                onGenerate={handleGenerateResource}
+                                generatingType={generatingResourceType}
+                                existingResources={currentSequence.generatedResources}
+                            />
+                        </>
                     ) : (
                         <div className="max-w-2xl mx-auto">
                             <SequenceForm onSubmit={handleGenerate} isLoading={isGenerating} />
@@ -147,6 +203,16 @@ export function DidacticSequence() {
                     </div>
                 </div>
             </div>
+
+            {viewerResource && (
+                <ResourceViewerModal
+                    isOpen={!!viewerResource}
+                    onClose={() => setViewerResource(null)}
+                    title={viewerResource.title}
+                    content={viewerResource.content}
+                    type={viewerResource.type}
+                />
+            )}
         </div>
     );
 }

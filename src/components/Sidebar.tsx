@@ -9,7 +9,8 @@ import {
     LogOut,
     Home,
     Settings,
-    X
+    X,
+    Layers
 } from 'lucide-react';
 
 const navigation = [
@@ -19,6 +20,7 @@ const navigation = [
     { name: 'Sequência Didática', href: '/didactic-sequence', icon: ListOrdered, color: 'text-amber-500' },
     { name: 'Avaliações', href: '/assessments', icon: FileCheck, color: 'text-rose-500' },
     { name: 'Relatório', href: '/reports', icon: BarChart, color: 'text-indigo-500' },
+    { name: 'Recursos', href: '/resources', icon: Layers, color: 'text-orange-500' },
     { name: 'Biblioteca', href: '/library', icon: Library, color: 'text-teal-500' },
     { name: 'Configurações', href: '/settings', icon: Settings, color: 'text-slate-500' },
 ];
@@ -32,7 +34,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-    const { signOut } = useAuth();
+    const { signOut, profile } = useAuth();
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
@@ -77,28 +79,30 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                     <nav className="flex-1 overflow-y-auto py-8 custom-scrollbar">
                         <ul className="space-y-2 px-4">
-                            {navigation.map((item) => (
-                                <li key={item.name}>
-                                    <NavLink
-                                        to={item.href}
-                                        onClick={onClose}
-                                        className={({ isActive }) =>
-                                            `flex items-center px-5 py-3.5 text-sm font-bold rounded-[20px] transition-all duration-300 group ${isActive
-                                                ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
-                                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
-                                            }`
-                                        }
-                                    >
-                                        {({ isActive }) => (
-                                            <>
-                                                <item.icon className={`mr-4 h-5 w-5 transition-transform duration-300 ${isActive ? 'text-white' : `${item.color} group-hover:scale-110`}`} />
-                                                <span className="flex-1">{item.name}</span>
-                                                {isActive && <ChevronRight size={14} className="opacity-60" />}
-                                            </>
-                                        )}
-                                    </NavLink>
-                                </li>
-                            ))}
+                            {navigation
+                                .filter(item => item.href !== '/settings' || (profile?.role === 'admin'))
+                                .map((item) => (
+                                    <li key={item.name}>
+                                        <NavLink
+                                            to={item.href}
+                                            onClick={onClose}
+                                            className={({ isActive }) =>
+                                                `flex items-center px-5 py-3.5 text-sm font-bold rounded-[20px] transition-all duration-300 group ${isActive
+                                                    ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
+                                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
+                                                }`
+                                            }
+                                        >
+                                            {({ isActive }) => (
+                                                <>
+                                                    <item.icon className={`mr-4 h-5 w-5 transition-transform duration-300 ${isActive ? 'text-white' : `${item.color} group-hover:scale-110`}`} />
+                                                    <span className="flex-1">{item.name}</span>
+                                                    {isActive && <ChevronRight size={14} className="opacity-60" />}
+                                                </>
+                                            )}
+                                        </NavLink>
+                                    </li>
+                                ))}
                         </ul>
                     </nav>
 

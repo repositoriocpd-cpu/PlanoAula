@@ -9,6 +9,13 @@ import { PlusCircle, FileText, FileEdit } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { exportLessonToPDF, exportLessonsToWord } from '../services/exportService';
 import { useAuth } from '../contexts/AuthContext';
+import { PedagogicalResourcesPanel } from '../components/pedagogical/PedagogicalResourcesPanel';
+import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
+import { generatePedagogicalResource } from '../services/resourceGenerator';
+import type { ResourceType } from '../types/resources';
+import { PresentationGeneratorModal } from '../components/presentation/PresentationGeneratorModal';
+import { PresentationViewer } from '../components/presentation/PresentationViewer';
+import type { Presentation } from '../types/presentation';
 
 export function DailyLessons() {
     const { user } = useAuth();
@@ -18,6 +25,15 @@ export function DailyLessons() {
 
     const selectedPlan = plans.find(p => p.id === selectedPlanId) || null;
     const [error, setError] = useState<string | null>(null);
+
+    // Resource State
+    const [generatingResourceType, setGeneratingResourceType] = useState<ResourceType | null>(null);
+    const [viewerResource, setViewerResource] = useState<{ title: string, content: string, type: string } | null>(null);
+    const { updateResources } = useLessonStore();
+
+    // Presentation State
+    const [isPresentationModalOpen, setIsPresentationModalOpen] = useState(false);
+    const [currentPresentation, setCurrentPresentation] = useState<Presentation | null>(null);
 
     React.useEffect(() => {
         fetchPlans();
@@ -39,6 +55,45 @@ export function DailyLessons() {
             console.error(err);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateResource = async (type: ResourceType) => {
+        if (!selectedPlan) return;
+
+        if (selectedPlan.generatedResources?.[type]) {
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content: selectedPlan.generatedResources[type].content,
+                type
+            });
+            return;
+        }
+
+        setGeneratingResourceType(type);
+        try {
+            const content = await generatePedagogicalResource(type, selectedPlan);
+            const newResources = {
+                ...(selectedPlan.generatedResources || {}),
+                [type]: {
+                    type,
+                    content,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await updateResources(selectedPlan.id, newResources);
+
+            setViewerResource({
+                title: type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' '),
+                content,
+                type
+            });
+        } catch (err) {
+            console.error('Error generating resource:', err);
+            alert('Erro ao gerar recurso pedagógico.');
+        } finally {
+            setGeneratingResourceType(null);
         }
     };
 
@@ -95,11 +150,19 @@ export function DailyLessons() {
                     )}
 
                     {selectedPlan ? (
-                        <LessonViewer
-                            plan={selectedPlan}
-                            onBack={() => setSelectedPlanId(null)}
-                            onDelete={() => handleDeletePlan(selectedPlan.id)}
-                        />
+                        <>
+                            <LessonViewer
+                                plan={selectedPlan}
+                                onBack={() => setSelectedPlanId(null)}
+                                onDelete={() => handleDeletePlan(selectedPlan.id)}
+                                onOpenPresentation={() => setIsPresentationModalOpen(true)}
+                            />
+                            <PedagogicalResourcesPanel
+                                onGenerate={handleGenerateResource}
+                                generatingType={generatingResourceType}
+                                existingResources={selectedPlan.generatedResources}
+                            />
+                        </>
                     ) : (
                         <div className="max-w-2xl mx-auto py-4">
                             <LessonForm onSubmit={handleCreatePlan} isLoading={isGenerating} />
@@ -147,6 +210,47 @@ export function DailyLessons() {
                     </div>
                 </div>
             </div>
+
+            {viewerResource && (
+                <ResourceViewerModal
+                    isOpen={!!viewerResource}
+                    onClose={() => setViewerResource(null)}
+                    title={viewerResource.title}
+                    content={viewerResource.content}
+                    type={viewerResource.type}
+                />
+            )}
+
+            {/* AI Slideshow Components */}
+            {selectedPlan && (
+                <PresentationGeneratorModal
+                    isOpen={isPresentationModalOpen}
+                    onClose={() => setIsPresentationModalOpen(false)}
+                    initialData={{
+                        title: selectedPlan.title,
+                        grade: selectedPlan.grade,
+                        discipline: selectedPlan.discipline,
+                        content: JSON.stringify(selectedPlan.content)
+                    }}
+                    onGenerated={(content) => {
+                        setCurrentPresentation({
+                            title: selectedPlan.title,
+                            grade: selectedPlan.grade,
+                            discipline: selectedPlan.discipline,
+                            theme: content.theme || 'clean-modern',
+                            duration_minutes: 10,
+                            content_json: content
+                        });
+                    }}
+                />
+            )}
+
+            {currentPresentation && (
+                <PresentationViewer
+                    presentation={currentPresentation}
+                    onClose={() => setCurrentPresentation(null)}
+                />
+            )}
         </div>
     );
 }

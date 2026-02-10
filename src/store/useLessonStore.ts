@@ -10,6 +10,7 @@ interface LessonStore {
     removePlan: (id: string) => Promise<void>;
     getPlan: (id: string) => LessonPlan | undefined;
     updateHeaderColor: (id: string, color: string) => Promise<void>;
+    updateResources: (id: string, resources: any) => Promise<void>;
 }
 
 export const useLessonStore = create<LessonStore>((set, get) => ({
@@ -39,7 +40,7 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
                 throw error;
             }
 
-            const formattedPlans: LessonPlan[] = (data || []).map(item => ({
+            const formattedLessons: LessonPlan[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 title: item.title,
@@ -50,10 +51,11 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
                 context: item.context,
                 createdAt: item.created_at,
                 headerColor: item.header_color,
-                content: item.content
+                content: item.content,
+                generatedResources: item.generated_resources || {}
             }));
 
-            set({ plans: formattedPlans });
+            set({ plans: formattedLessons });
         } catch (error) {
             console.error('Error fetching lesson plans catch block:', error);
         } finally {
@@ -129,6 +131,25 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
             if (error) throw error;
         } catch (error) {
             console.error('Error updating header color:', error);
+        }
+    },
+
+    updateResources: async (id, resources) => {
+        set((state) => ({
+            plans: state.plans.map((p) =>
+                p.id === id ? { ...p, generatedResources: resources } : p
+            )
+        }));
+        try {
+            const { error } = await supabase
+                .from('lesson_plans')
+                .update({ generated_resources: resources })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating lesson plan resources:', error);
+            throw error;
         }
     }
 }));

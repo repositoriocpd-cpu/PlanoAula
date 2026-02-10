@@ -1,4 +1,4 @@
-import { FileText, FileEdit, ArrowLeft, Palette, Trash2 } from 'lucide-react';
+import { FileText, FileEdit, ArrowLeft, Palette, Trash2, Presentation as PresentationIcon } from 'lucide-react';
 import type { AnnualPlan } from '../../types/annualPlan';
 import { exportAnnualPlanToPDF, exportAnnualPlansToWord } from '../../services/exportService';
 import { useAnnualPlanStore } from '../../store/useAnnualPlanStore';
@@ -7,9 +7,10 @@ interface AnnualPlanViewerProps {
     plan: AnnualPlan;
     onBack: () => void;
     onDelete?: (id: string) => void;
+    onOpenPresentation?: () => void;
 }
 
-export function AnnualPlanViewer({ plan, onBack, onDelete }: AnnualPlanViewerProps) {
+export function AnnualPlanViewer({ plan, onBack, onDelete, onOpenPresentation }: AnnualPlanViewerProps) {
     const { updatePlanColor } = useAnnualPlanStore();
     const activeColor = plan.headerColor || '#7C3AED';
 
@@ -86,6 +87,17 @@ export function AnnualPlanViewer({ plan, onBack, onDelete }: AnnualPlanViewerPro
                             <span className="text-xs font-black tracking-tight">Word</span>
                         </button>
                     </div>
+
+                    {onOpenPresentation && (
+                        <button
+                            onClick={onOpenPresentation}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase transition-all shadow-md hover:shadow-lg shadow-purple-200"
+                        >
+                            <PresentationIcon className="h-4 w-4" />
+                            Apresentação
+                        </button>
+                    )}
+
                     {onDelete && (
                         <button
                             onClick={() => onDelete(plan.id)}

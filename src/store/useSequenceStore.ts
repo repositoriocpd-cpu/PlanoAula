@@ -9,6 +9,7 @@ interface SequenceStore {
     addSequence: (sequence: DidacticSequence) => Promise<void>;
     removeSequence: (id: string) => Promise<void>;
     updateHeaderColor: (id: string, color: string) => Promise<void>;
+    updateResources: (id: string, resources: any) => Promise<void>;
 }
 
 export const useSequenceStore = create<SequenceStore>((set) => ({
@@ -38,7 +39,7 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
                 throw error;
             }
 
-            const formattedSequences: DidacticSequence[] = (data || []).map(item => ({
+            const formattedSequences: DidacticSequence[] = (data || []).map((item: any) => ({
                 id: item.id,
                 userId: item.user_id,
                 theme: item.theme,
@@ -48,7 +49,8 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
                 bnccSkills: item.bncc_skills,
                 classes: item.classes,
                 finalEvaluation: item.final_evaluation,
-                headerColor: item.header_color
+                headerColor: item.header_color,
+                generatedResources: item.generated_resources || {}
             }));
 
             set({ sequences: formattedSequences });
@@ -119,6 +121,25 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
             if (error) throw error;
         } catch (error) {
             console.error('Error updating header color:', error);
+        }
+    },
+
+    updateResources: async (id, resources) => {
+        set((state) => ({
+            sequences: state.sequences.map((s) =>
+                s.id === id ? { ...s, generatedResources: resources } : s
+            )
+        }));
+        try {
+            const { error } = await supabase
+                .from('didactic_sequences')
+                .update({ generated_resources: resources })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating sequence resources:', error);
+            throw error;
         }
     }
 }));

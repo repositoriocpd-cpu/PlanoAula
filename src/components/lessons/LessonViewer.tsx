@@ -1,5 +1,5 @@
 import { FormattedText } from '../ui/FormattedText';
-import { FileText, FileEdit, Trash2, ArrowLeft, Palette } from 'lucide-react';
+import { FileText, FileEdit, Trash2, ArrowLeft, Palette, Presentation as PresentationIcon } from 'lucide-react';
 import type { LessonPlan } from '../../types/lesson';
 import { exportLessonToPDF, exportLessonsToWord } from '../../services/exportService';
 import { useLessonStore } from '../../store/useLessonStore';
@@ -8,9 +8,10 @@ interface LessonViewerProps {
     plan: LessonPlan;
     onBack: () => void;
     onDelete?: () => void;
+    onOpenPresentation?: () => void;
 }
 
-export function LessonViewer({ plan, onBack, onDelete }: LessonViewerProps) {
+export function LessonViewer({ plan, onBack, onDelete, onOpenPresentation }: LessonViewerProps) {
     const { updateHeaderColor } = useLessonStore();
     const content = plan.content;
     const activeColor = plan.headerColor || '#3B82F6'; // Default blue for lessons
@@ -90,6 +91,17 @@ export function LessonViewer({ plan, onBack, onDelete }: LessonViewerProps) {
                             <span className="text-xs font-black tracking-tight">Word</span>
                         </button>
                     </div>
+
+                    {onOpenPresentation && (
+                        <button
+                            onClick={onOpenPresentation}
+                            className="flex items-center space-x-2 px-4 py-2.5 bg-primary text-white hover:bg-blue-700 rounded-xl transition-all duration-300 shadow-lg shadow-primary/20 hover:-translate-y-0.5 group"
+                        >
+                            <PresentationIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                            <span className="text-xs font-black uppercase tracking-tight">Apresentação</span>
+                        </button>
+                    )}
+
                     {onDelete && (
                         <button
                             onClick={onDelete}
