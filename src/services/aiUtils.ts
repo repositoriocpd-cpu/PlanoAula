@@ -2,6 +2,8 @@
  * Simple retry utility with exponential backoff for AI service calls.
  * Specially tuned to handle 429 (Quota) and 503 (Busy) errors.
  */
+export const GEMINI_MODEL = 'gemini-2.5-flash';
+
 export async function withRetry<T>(
     operation: () => Promise<T>,
     maxRetries: number = 3,
@@ -17,8 +19,17 @@ export async function withRetry<T>(
 
             const errorMessage = error?.message || String(error);
 
-            // 503 is Service Unavailable (high demand)
-            // 429 is Too Many Requests (rate limit)
+            // 503 is Service Unavailable (high demand) - Retryable
+            // 429 is Too Many Requests (rate limit) - Retryable ONLY if not Quota Exceeded (Hard Limit)
+
+            const isQuotaError = errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('billing');
+
+            // If it's a hard quota error, DO NOT RETRY. Throw immediately so FallbackProvider can switch to next provider.
+            if (isQuotaError) {
+                console.warn(`Quota exceeded (${errorMessage}). Aborting retries to trigger fallback.`);
+                throw error;
+            }
+
             const isRetryable = errorMessage.includes('503') ||
                 errorMessage.includes('429') ||
                 error?.status === 503 ||
@@ -44,4 +55,38 @@ export async function withRetry<T>(
     }
 
     throw lastError;
+}
+
+// Helper to extract JSON from AI response that might contain markdown or text
+export function extractJSON(text: string): any {
+    try {
+        // First try to parse as is
+        return JSON.parse(text);
+    } catch (e) {
+        // Try to extract from markdown code blocks
+        const markdownMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+        if (markdownMatch) {
+            try {
+                return JSON.parse(markdownMatch[1]);
+            } catch (e2) {
+                // Continue to next method
+            }
+        }
+
+        // Try to find the first '{' and last '}'
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            const potentialJson = text.substring(firstBrace, lastBrace + 1);
+            try {
+                return JSON.parse(potentialJson);
+            } catch (e3) {
+                console.error('Failed to parse extracted JSON:', e3);
+                throw new Error('Falha ao processar resposta da IA. Formato JSON inválido.');
+            }
+        }
+
+        throw new Error('Não foi possível encontrar um JSON válido na resposta da IA.');
+    }
 }

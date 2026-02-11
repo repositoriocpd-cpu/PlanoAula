@@ -183,9 +183,6 @@ export function Library() {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                        <div className="bg-gray-50 p-4 rounded-full mb-4">
-                            <Search className="h-8 w-8 text-gray-300" />
-                        </div>
                         <p className="text-lg font-medium">Nenhum recurso encontrado.</p>
                         <p className="text-sm mt-1">Tente ajustar os filtros ou buscar por outro termo.</p>
                         <button

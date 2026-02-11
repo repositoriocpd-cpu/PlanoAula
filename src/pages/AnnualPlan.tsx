@@ -16,6 +16,7 @@ import type { ResourceType } from '../types/resources';
 import { PresentationGeneratorModal } from '../components/presentation/PresentationGeneratorModal';
 import { PresentationViewer } from '../components/presentation/PresentationViewer';
 import type { Presentation } from '../types/presentation';
+import { performSafetyBackup } from '../services/backupService';
 
 export function AnnualPlan() {
     const { user } = useAuth();
@@ -48,6 +49,11 @@ export function AnnualPlan() {
                 plan.userId = user.id;
             }
             await addPlan(plan); // Save to store/DB
+            await performSafetyBackup({
+                type: 'annual',
+                data: plan,
+                filename: `PLANO_ANUAL_${plan.discipline.replace(/ /g, '_')}`
+            });
             setSelectedPlanId(plan.id);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar planejamento.';

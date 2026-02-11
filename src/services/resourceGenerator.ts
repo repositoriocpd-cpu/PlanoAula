@@ -1,20 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getAIProvider } from './ai/aiProvider';
 import type { ResourceType } from '../types/resources';
-import { withRetry } from './aiUtils';
 
-const getAPIKey = () => {
-    const key = import.meta.env.VITE_GOOGLE_AI_KEY;
-    if (!key) {
-        throw new Error('Chave da API do Google não encontrada. Verifique seu arquivo .env');
-    }
-    return key;
-};
-
-const getGenAI = () => new GoogleGenerativeAI(getAPIKey());
+// Removed direct GenAI setup
 
 export async function generatePedagogicalResource(type: ResourceType, context: any | string): Promise<any> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+
 
     const contextStr = JSON.stringify(context);
 
@@ -92,8 +82,12 @@ export async function generatePedagogicalResource(type: ResourceType, context: a
             break;
         case 'simulado_saeb':
             prompt = `Gere um simulado estilo SAEB com 10 questões de múltipla escolha baseadas no conteúdo abaixo. 
-            As questões devem seguir os descritores do SAEB e a matriz de referência de 2017. 
-            Inclua o gabarito.
+            ESTRUTURA OBRIGATÓRIA:
+            1. As questões devem seguir os descritores do SAEB e a matriz de referência.
+            2. Cada questão deve ter 4 alternativas (A, B, C, D).
+            3. Inclua o gabarito comentado ao final.
+            4. Formate de maneira clara e legível.
+            
             CONTEÚDO BASE: ${contextStr}`;
             break;
         case 'listas_bncc':
@@ -115,9 +109,9 @@ export async function generatePedagogicalResource(type: ResourceType, context: a
     prompt += `\n\nResponda em PORTUGUÊS BRASIL de forma EXCELENTE e bem formatada em Markdown.`;
 
     try {
-        const result = await withRetry(() => model.generateContent(prompt));
-        const response = await result.response;
-        return response.text();
+        const aiProvider = getAIProvider();
+        const responseText = await aiProvider.generateContent(prompt);
+        return responseText;
     } catch (error) {
         console.error('Erro na geração do recurso:', error);
         throw error;

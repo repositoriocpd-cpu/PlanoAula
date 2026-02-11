@@ -1,9 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from './supabase';
 import type { Presentation, PresentationTheme, Slide } from '../types/presentation';
-import { withRetry } from './aiUtils';
+import { getAIProvider } from './ai/aiProvider';
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_AI_KEY || '');
+// const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_AI_KEY || '');
 
 export const presentationService = {
     async generatePresentation(params: {
@@ -14,7 +13,7 @@ export const presentationService = {
         duration: 5 | 10 | 15,
         baseContext: string
     }): Promise<Presentation['content_json']> {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+
 
         const systemPrompt = `Você é um gerador de apresentações didáticas premium para professores.
         Gere uma apresentação em formato JSON seguindo EXATAMENTE este modelo:
@@ -61,9 +60,10 @@ export const presentationService = {
         Contexto base: ${params.baseContext}`;
 
         try {
-            const result = await withRetry(() => model.generateContent([systemPrompt, userPrompt]));
-            const response = await result.response;
-            const text = response.text();
+            const aiProvider = getAIProvider();
+            const text = await aiProvider.generateContent(systemPrompt + "\n\n" + userPrompt);
+
+            // Cleanup response if needed (AIProvider should handle basic extraction, but JSON parsing is specific)
 
             // Improved extraction: find the first { and the last }
             const startIdx = text.indexOf('{');
@@ -88,6 +88,23 @@ export const presentationService = {
                 console.error('Missing slides array in content:', content);
                 throw new Error('A IA não gerou os slides corretamente.');
             }
+
+            // Replace Image Placeholders with Pollinations.ai
+            content.slides = content.slides.map((slide: Slide) => {
+                if (slide.type === 'image_caption' && slide.image_url === 'PLACEHOLDER') {
+                    // Create a descriptive prompt for the image
+                    // Add parameters to ensure better relevance and bypassing potential filters
+                    const imagePrompt = `${slide.headline} ${slide.caption || ''} educational photorealistic 4k`;
+                    const encodedPrompt = encodeURIComponent(imagePrompt);
+                    const randomSeed = Math.floor(Math.random() * 1000);
+                    return {
+                        ...slide,
+                        // Update to new endpoint format directly
+                        image_url: `https://pollinations.ai/p/${encodedPrompt}?width=800&height=600&seed=${randomSeed}&nologo=true`
+                    };
+                }
+                return slide;
+            });
 
             if (content.slides.length > 9) {
                 content.slides = content.slides.slice(0, 9);
@@ -118,6 +135,7 @@ export const presentationService = {
     async savePresentation(presentation: Presentation) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) throw new Error('User not authenticated');
+
 
         const { data, error } = await supabase
             .from('ai_presentations')

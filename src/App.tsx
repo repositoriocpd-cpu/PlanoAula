@@ -13,7 +13,6 @@ import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
-import { ErrorBoundary } from './components/ErrorBoundary';
 import { BNCCInfo } from './pages/BNCCInfo';
 import { InstallBanner } from './components/InstallBanner';
 
@@ -89,38 +88,36 @@ function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <Router>
-        <AuthProvider>
-          <InstallBanner />
-          <Routes>
-            <Route path="/login" element={<Login />} />
+    <Router>
+      <AuthProvider>
+        <InstallBanner />
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-            {/* Protected Routes */}
-            <Route path="/" element={
-              <PrivateRoute>
-                <MainLayout />
-              </PrivateRoute>
-            }>
-              <Route index element={<Home />} />
-              <Route path="daily-lessons" element={<DailyLessons />} />
-              <Route path="annual-plan" element={<AnnualPlan />} />
-              <Route path="didactic-sequence" element={<DidacticSequence />} />
-              <Route path="assessments" element={<Assessments />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="resources" element={<Resources />} />
-              <Route path="library" element={<Library />} />
-              <Route path="library/bncc-info" element={<BNCCInfo />} />
-              <Route path="settings" element={
-                <AdminRoute>
-                  <Settings />
-                </AdminRoute>
-              } />
-            </Route>
-          </Routes>
-        </AuthProvider>
-      </Router>
-    </ErrorBoundary>
+          {/* Protected Routes */}
+          <Route path="/" element={
+            <PrivateRoute>
+              <MainLayout />
+            </PrivateRoute>
+          }>
+            <Route index element={<Home />} />
+            <Route path="daily-lessons" element={<DailyLessons />} />
+            <Route path="annual-plan" element={<AnnualPlan />} />
+            <Route path="didactic-sequence" element={<DidacticSequence />} />
+            <Route path="assessments" element={<Assessments />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="resources" element={<Resources />} />
+            <Route path="library" element={<Library />} />
+            <Route path="library/bncc-info" element={<BNCCInfo />} />
+            <Route path="settings" element={
+              <AdminRoute>
+                <Settings />
+              </AdminRoute>
+            } />
+          </Route>
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }
 

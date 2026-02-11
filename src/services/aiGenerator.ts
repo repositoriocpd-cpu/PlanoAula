@@ -1,24 +1,12 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getAIProvider } from './ai/aiProvider';
+import { extractJSON } from './aiUtils';
 import type { LessonPlanFormData, LessonPlan } from '../types/lesson';
 import type { AnnualPlanFormData, AnnualPlan } from '../types/annualPlan';
 import type { SequenceFormData, DidacticSequence } from '../types/sequence';
 import type { AssessmentFormData, Assessment } from '../types/assessment';
 import type { ReportFormData, Report } from '../types/report';
-import { withRetry } from './aiUtils';
-
-const API_KEY = import.meta.env.VITE_GOOGLE_AI_KEY;
-
-const getGenAI = () => {
-  if (!API_KEY) {
-    throw new Error('API Key for Google AI is missing. Please set VITE_GOOGLE_AI_KEY in .env.local');
-  }
-  return new GoogleGenerativeAI(API_KEY);
-};
 
 export async function generateLessonPlan(data: LessonPlanFormData): Promise<LessonPlan> {
-  const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-
   const prompt = `
     Como um especialista pedagógico, crie um Plano de Aula EXCELENTE e completo, estritamente alinhado à Base Nacional Comum Curricular (BNCC).
     Referência Oficial: http://basenacionalcomum.mec.gov.br/images/BNCC_EI_EF_110518_versaofinal.pdf
@@ -55,14 +43,10 @@ export async function generateLessonPlan(data: LessonPlanFormData): Promise<Less
   `;
 
   try {
-    const result = await withRetry(() => model.generateContent(prompt));
-    const response = await result.response;
-    const text = response.text();
+    const aiProvider = getAIProvider();
+    const text = await aiProvider.generateContent(prompt);
 
-    // Clean up markdown code blocks if present
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    const json = JSON.parse(cleanText);
+    const json = extractJSON(text);
 
     return {
       id: crypto.randomUUID(),
@@ -82,9 +66,6 @@ export async function generateLessonPlan(data: LessonPlanFormData): Promise<Less
 }
 
 export async function generateAnnualPlan(data: AnnualPlanFormData): Promise<AnnualPlan> {
-  const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-
   const isInfantil = data.grade === 'Educação Infantil';
 
   const prompt = isInfantil ? `
@@ -138,11 +119,10 @@ export async function generateAnnualPlan(data: AnnualPlanFormData): Promise<Annu
   `;
 
   try {
-    const result = await withRetry(() => model.generateContent(prompt));
-    const response = await result.response;
-    const text = response.text();
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const json = JSON.parse(cleanText);
+    const aiProvider = getAIProvider();
+    const text = await aiProvider.generateContent(prompt);
+
+    const json = extractJSON(text);
 
     return {
       id: crypto.randomUUID(),
@@ -160,9 +140,6 @@ export async function generateAnnualPlan(data: AnnualPlanFormData): Promise<Annu
 }
 
 export async function generateDidacticSequence(data: SequenceFormData): Promise<DidacticSequence> {
-  const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-
   const prompt = `
     Crie uma Sequência Didática alinhada à BNCC sobre:
     Tema: ${data.theme}
@@ -189,11 +166,9 @@ export async function generateDidacticSequence(data: SequenceFormData): Promise<
   `;
 
   try {
-    const result = await withRetry(() => model.generateContent(prompt));
-    const response = await result.response;
-    const text = response.text();
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const json = JSON.parse(cleanText);
+    const aiProvider = getAIProvider();
+    const text = await aiProvider.generateContent(prompt);
+    const json = extractJSON(text);
 
     return {
       id: crypto.randomUUID(),
@@ -212,9 +187,6 @@ export async function generateDidacticSequence(data: SequenceFormData): Promise<
 }
 
 export async function generateAssessment(data: AssessmentFormData): Promise<Assessment> {
-  const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
   const prompt = `
     Crie uma ${data.type} alinhada à BNCC para:
     Disciplina: ${data.discipline}
@@ -252,11 +224,9 @@ export async function generateAssessment(data: AssessmentFormData): Promise<Asse
   `;
 
   try {
-    const result = await withRetry(() => model.generateContent(prompt));
-    const response = await result.response;
-    const text = response.text();
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const json = JSON.parse(cleanText);
+    const aiProvider = getAIProvider();
+    const text = await aiProvider.generateContent(prompt);
+    const json = extractJSON(text);
 
     return {
       id: crypto.randomUUID(),
@@ -276,9 +246,6 @@ export async function generateAssessment(data: AssessmentFormData): Promise<Asse
 }
 
 export async function generateReport(data: ReportFormData): Promise<Report> {
-  const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
   const prompt = `
     Crie um Relatório Individual de Desenvolvimento (Parecer Descritivo) para:
     Aluno(a): ${data.studentName}
@@ -293,9 +260,8 @@ export async function generateReport(data: ReportFormData): Promise<Report> {
   `;
 
   try {
-    const result = await withRetry(() => model.generateContent(prompt));
-    const response = await result.response;
-    const text = response.text();
+    const aiProvider = getAIProvider();
+    const text = await aiProvider.generateContent(prompt);
 
     return {
       id: crypto.randomUUID(),

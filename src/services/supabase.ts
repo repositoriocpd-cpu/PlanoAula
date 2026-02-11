@@ -23,8 +23,17 @@ export const supabase = isConfigured
         from: () => ({
             select: () => ({
                 eq: () => ({
-                    single: () => Promise.resolve({ data: null, error: null })
-                })
+                    single: () => Promise.resolve({ data: null, error: null }),
+                    order: () => Promise.resolve({ data: [], error: null })
+                }),
+                order: () => Promise.resolve({ data: [], error: null })
+            }),
+            insert: () => Promise.resolve({ data: null, error: { message: 'Supabase não configurado. Verifique o arquivo .env' } }),
+            update: () => ({
+                eq: () => Promise.resolve({ data: null, error: { message: 'Supabase não configurado. Verifique o arquivo .env' } })
+            }),
+            delete: () => ({
+                eq: () => Promise.resolve({ data: null, error: { message: 'Supabase não configurado. Verifique o arquivo .env' } })
             })
         })
     } as any;

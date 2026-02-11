@@ -24,11 +24,21 @@ export function SequenceViewer({ sequence, onBack, onDelete }: SequenceViewerPro
     ];
 
     const handleDownloadPDF = () => {
-        exportSequenceToPDF(sequence);
+        try {
+            exportSequenceToPDF(sequence);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Houve um erro ao gerar o PDF. Por favor, tente novamente.');
+        }
     };
 
-    const handleDownloadWord = () => {
-        exportSequencesToWord([sequence], `Sequencia_${sequence.theme.replace(/ /g, '_')}.docx`);
+    const handleDownloadWord = async () => {
+        try {
+            await exportSequencesToWord([sequence], `Sequencia_${sequence.theme.replace(/ /g, '_')}.docx`);
+        } catch (error) {
+            console.error('Error generating Word:', error);
+            alert('Houve um erro ao gerar o arquivo Word. Por favor, tente novamente.');
+        }
     };
 
     const handleColorChange = (color: string) => {

@@ -23,8 +23,33 @@ export const VisualMindMap: React.FC<VisualMindMapProps> = ({ markdown }) => {
             mmRef.current = Markmap.create(svgRef.current);
         }
 
+        // Clean markdown artifacts (specifically ## inside text)
+        const cleanMarkdown = (md: string) => {
+            return md.split('\n').map(line => {
+                // Check for header or list item
+                const match = line.match(/^(\s*)(#+|\-|[\d]+\.)\s+(.*)/);
+
+                if (match) {
+                    const [_, indent, marker, content] = match;
+                    // Remove # that are inside the content (not the marker)
+                    // Also cleaning ** which might be rendered poorly if not supported
+                    const cleanedContent = content
+                        .replace(/#{2,}/g, '') // Remove ##, ###, etc inside text
+                        .replace(/\*\*/g, '')  // Remove bold markers if they are appearing as text
+                        .replace(/\s+/g, ' ')  // Collapse multiple spaces
+                        .trim();
+                    return `${indent}${marker} ${cleanedContent}`;
+                }
+
+                // If it's a plain line (rare in valid mindmap md but possible)
+                return line.replace(/#{2,}/g, '').replace(/\*\*/g, '').trim();
+            }).join('\n');
+        };
+
+        const cleanedMarkdown = cleanMarkdown(markdown);
+
         // Update content
-        const { root } = transformer.transform(markdown);
+        const { root } = transformer.transform(cleanedMarkdown);
         mmRef.current.setData(root);
         mmRef.current.fit();
 
@@ -45,7 +70,7 @@ export const VisualMindMap: React.FC<VisualMindMapProps> = ({ markdown }) => {
     }, [markdown]);
 
     return (
-        <div ref={containerRef} className="relative w-full h-[500px] bg-slate-50/50 rounded-3xl border border-dashed border-gray-200 overflow-hidden group">
+        <div ref={containerRef} className="relative w-full h-full min-h-[500px] bg-slate-50/50 rounded-3xl border border-dashed border-gray-200 overflow-hidden group">
             <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-sm border border-gray-100 pointer-events-none">
                 <span className="text-xs font-black text-purple-600 uppercase tracking-widest">Esquema Visual Boardmix</span>
             </div>

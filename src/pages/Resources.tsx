@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Search, Sparkles } from 'lucide-react';
 import { PedagogicalResourcesPanel } from '../components/pedagogical/PedagogicalResourcesPanel';
 import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
@@ -24,9 +24,17 @@ export function Resources() {
                 content,
                 type
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error generating resource:', error);
-            alert('Erro ao gerar recurso. Tente novamente.');
+            let errorMessage = 'Erro ao gerar recurso. Tente novamente.';
+
+            if (error.message?.includes('429')) {
+                errorMessage = 'Muitas requisições. Por favor, aguarde alguns instantes e tente novamente.';
+            } else if (error.message?.includes('503')) {
+                errorMessage = 'Serviço temporariamente indisponível. Tente novamente em breve.';
+            }
+
+            alert(errorMessage);
         } finally {
             setGeneratingType(null);
         }

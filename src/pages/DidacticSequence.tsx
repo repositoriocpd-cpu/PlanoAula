@@ -13,6 +13,7 @@ import { PedagogicalResourcesPanel } from '../components/pedagogical/Pedagogical
 import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
 import { generatePedagogicalResource } from '../services/resourceGenerator';
 import type { ResourceType } from '../types/resources';
+import { performSafetyBackup } from '../services/backupService';
 
 export function DidacticSequence() {
     const { user } = useAuth();
@@ -41,12 +42,34 @@ export function DidacticSequence() {
                 sequence.userId = user.id;
             }
             await addSequence(sequence);
+            await performSafetyBackup({
+                type: 'sequence',
+                data: sequence,
+                filename: `SEQUENCIA_${sequence.theme.replace(/ /g, '_')}`
+            });
             setSelectedSequenceId(sequence.id);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar sequência.';
-            setError(`Erro: ${errorMessage}`);
-            alert(`Erro ao salvar no banco de dados: ${errorMessage}`);
+        } catch (err: any) {
             console.error('Sequence generation/save error:', err);
+
+            let errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar sequência.';
+            let userFriendlyMessage = errorMessage;
+
+            if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+                userFriendlyMessage = '⚠️ Limite de uso da IA atingido. Por favor, aguarde alguns instantes e tente novamente. Se o problema persistir, verifique seu plano.';
+            } else if (errorMessage.includes('503')) {
+                userFriendlyMessage = '⚠️ O serviço de IA está temporariamente indisponível (sobrecarregado). Tente novamente em alguns segundos.';
+            } else if (errorMessage.toLowerCase().includes('generate')) {
+                userFriendlyMessage = 'Erro na geração do conteúdo pela IA. ' + errorMessage;
+            } else if (errorMessage.toLowerCase().includes('database') || errorMessage.toLowerCase().includes('supabase')) {
+                userFriendlyMessage = 'Erro ao salvar a sequência no banco de dados. Seus dados podem não ter sido salvos.';
+            }
+
+            setError(userFriendlyMessage);
+
+            // Only alert if it's not a quota error (which is handled gracefully by the UI message)
+            if (!errorMessage.includes('quota') && !errorMessage.includes('429')) {
+                alert(userFriendlyMessage);
+            }
         } finally {
             setIsGenerating(false);
         }

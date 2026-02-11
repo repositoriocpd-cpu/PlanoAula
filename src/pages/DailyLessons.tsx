@@ -16,6 +16,7 @@ import type { ResourceType } from '../types/resources';
 import { PresentationGeneratorModal } from '../components/presentation/PresentationGeneratorModal';
 import { PresentationViewer } from '../components/presentation/PresentationViewer';
 import type { Presentation } from '../types/presentation';
+import { performSafetyBackup } from '../services/backupService';
 
 export function DailyLessons() {
     const { user } = useAuth();
@@ -48,6 +49,11 @@ export function DailyLessons() {
                 newPlan.userId = user.id;
             }
             await addPlan(newPlan);
+            await performSafetyBackup({
+                type: 'lesson',
+                data: newPlan,
+                filename: `PLANO_AULA_${newPlan.title.replace(/ /g, '_')}`
+            });
             setSelectedPlanId(newPlan.id);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar plano.';

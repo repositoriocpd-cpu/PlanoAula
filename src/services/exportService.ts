@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
 import pptxgen from 'pptxgenjs';
 import type { LessonPlan } from '../types/lesson';
@@ -8,14 +8,36 @@ import type { DidacticSequence } from '../types/sequence';
 import type { Assessment } from '../types/assessment';
 import type { Report as AppReport } from '../types/report';
 
+// --- VISUAL CONSTANTS ---
+const COLORS = {
+    primary: [79, 70, 229], // Indigo 600
+    secondary: [238, 242, 255], // Indigo 50
+    text: [31, 41, 55], // Gray 800
+    textLight: [107, 114, 128], // Gray 500
+    accent: [224, 231, 255], // Indigo 200 (Borders)
+    white: [255, 255, 255]
+};
+
+const FONTS = {
+    title: { font: 'helvetica', style: 'bold', size: 18 },
+    subtitle: { font: 'helvetica', style: 'normal', size: 11 },
+    section: { font: 'helvetica', style: 'bold', size: 12 },
+    body: { font: 'helvetica', style: 'normal', size: 10 },
+    bold: { font: 'helvetica', style: 'bold', size: 10 }
+};
+
+const PAGE = {
+    width: 210,
+    height: 297,
+    margin: 20,
+    contentWidth: 170 // 210 - 40
+};
+
+// --- HELPERS ---
+
 const cleanText = (text: string) => text.replace(/\*\*|\*/g, '');
 
-const hexToRgb = (hex: string): [number, number, number] => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return [r, g, b];
-};
+
 
 const renderJustifiedBoldText = (doc: jsPDF, text: string, x: number, y: number, width: number, fontSize: number, isLastLine = false) => {
     const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
@@ -63,7 +85,6 @@ const renderJustifiedBoldText = (doc: jsPDF, text: string, x: number, y: number,
     return y + fontSize * 0.5;
 };
 
-// Helper to split text into lines that fit a width, preserving bold markers
 const splitTextWithBold = (doc: jsPDF, text: string, maxWidth: number) => {
     const lines: string[] = [];
     const paragraphs = text.split('\n');
@@ -82,84 +103,129 @@ const splitTextWithBold = (doc: jsPDF, text: string, maxWidth: number) => {
                 currentLine = testLine;
             }
         });
-        lines.push(currentLine + '\n'); // \n denotes end of paragraph
+        lines.push(currentLine + '\n');
     });
 
     return lines;
 };
 
-export const exportLessonToPDF = (plan: LessonPlan, doc?: jsPDF, startY = 30) => {
+// --- DESIGN COMPONENTS ---
+
+const drawHeader = (doc: jsPDF, title: string, _subtitle: string) => {
+    // Top Bar
+    doc.setFillColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.rect(0, 0, PAGE.width, 24, 'F');
+
+    // Logo / Brand
+    doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('PLANEJAEDU', PAGE.margin, 16);
+
+    // Document Type (Right Aligned)
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(title.toUpperCase(), PAGE.width - PAGE.margin, 16, { align: 'right' });
+
+    // Reset
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+};
+
+const drawFooter = (doc: jsPDF, pageNumber: number) => {
+    const y = PAGE.height - 10;
+    doc.setDrawColor(229, 231, 235); // Gray 200
+    doc.setLineWidth(0.5);
+    doc.line(PAGE.margin, y - 5, PAGE.width - PAGE.margin, y - 5);
+
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+    doc.text(`Gerado por PlanejaEdu AI • ${new Date().toLocaleDateString()}`, PAGE.margin, y);
+    doc.text(`Página ${pageNumber}`, PAGE.width - PAGE.margin, y, { align: 'right' });
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+};
+
+const drawSectionTitle = (doc: jsPDF, title: string, y: number) => {
+    doc.setFillColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.setDrawColor(COLORS.accent[0], COLORS.accent[1], COLORS.accent[2]);
+    doc.roundedRect(PAGE.margin, y - 5, PAGE.contentWidth, 10, 2, 2, 'FD');
+
+    doc.setFont(FONTS.section.font, FONTS.section.style);
+    doc.setFontSize(FONTS.section.size);
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text(title.toUpperCase(), PAGE.margin + 4, y + 1.5);
+
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    return y + 12;
+};
+
+const checkPageBreak = (doc: jsPDF, y: number, heightObj: number, title: string, subtitle: string, pageNum: { val: number }) => {
+    if (y + heightObj > PAGE.height - 20) {
+        drawFooter(doc, pageNum.val);
+        doc.addPage();
+        pageNum.val++;
+        drawHeader(doc, title, subtitle);
+        return 40; // New Y
+    }
+    return y;
+};
+
+// --- EXPORT FUNCTIONS ---
+
+export const exportLessonToPDF = (plan: LessonPlan, doc?: jsPDF, startY = 35) => {
     const internalDoc = doc || new jsPDF();
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
     let y = startY;
+    let pageNum = { val: 1 };
 
-    const [r, g, b] = plan.headerColor ? hexToRgb(plan.headerColor) : [124, 58, 237];
+    if (!doc) drawHeader(internalDoc, 'Plano de Aula', plan.discipline);
 
-    const addHeader = (title: string) => {
-        internalDoc.setFillColor(r, g, b);
-        internalDoc.rect(0, 0, pageWidth, 15, 'F');
-        internalDoc.setTextColor(255, 255, 255);
-        internalDoc.setFontSize(10);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.text('PLANEJAEDU - ' + title.toUpperCase(), margin, 10);
-        internalDoc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
-        internalDoc.setTextColor(0);
-    };
+    // Title Block
+    internalDoc.setFont(FONTS.title.font, FONTS.title.style);
+    internalDoc.setFontSize(FONTS.title.size);
+    const titleLines = internalDoc.splitTextToSize(cleanText(plan.title), PAGE.contentWidth);
+    internalDoc.text(titleLines, PAGE.margin, y);
+    y += (titleLines.length * 8) + 4;
 
-    if (!doc) addHeader('Plano de Aula');
+    // Info Grid
+    internalDoc.setFillColor(250, 250, 250);
+    internalDoc.setDrawColor(230, 230, 230);
+    internalDoc.roundedRect(PAGE.margin, y, PAGE.contentWidth, 18, 2, 2, 'FD');
 
-    const checkPageBreak = (height: number) => {
-        if (y + height > pageHeight - 20) {
-            internalDoc.addPage();
-            y = 20;
-            addHeader('Plano de Aula (cont.)');
-        }
-    };
+    internalDoc.setFontSize(9);
+    internalDoc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+    internalDoc.text('Disciplina:', PAGE.margin + 5, y + 6);
+    internalDoc.text('Série/Ano:', PAGE.margin + 70, y + 6);
+    internalDoc.text('Duração:', PAGE.margin + 130, y + 6);
 
-    // Title
-    internalDoc.setFontSize(18);
-    internalDoc.setFont('helvetica', 'bold');
-    const titleLines = internalDoc.splitTextToSize(cleanText(plan.title), contentWidth);
-    internalDoc.text(titleLines, margin, y);
-    y += (titleLines.length * 8) + 5;
-
-    // Info Box
-    internalDoc.setFillColor(243, 244, 246);
-    internalDoc.rect(margin, y, contentWidth, 20, 'F');
-    internalDoc.setFontSize(10);
-    internalDoc.setFont('helvetica', 'normal');
-    internalDoc.text(`${plan.discipline} • ${plan.grade}`, margin + 5, y + 8);
-    internalDoc.text(`Duração: ${plan.duration}`, margin + 5, y + 15);
-    y += 30;
+    internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+    internalDoc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    internalDoc.text(plan.discipline, PAGE.margin + 5, y + 12);
+    internalDoc.text(plan.grade, PAGE.margin + 70, y + 12);
+    internalDoc.text(plan.duration, PAGE.margin + 130, y + 12);
+    y += 28;
 
     const addSection = (title: string, rawText: string | string[]) => {
         if (!rawText || (Array.isArray(rawText) && rawText.length === 0)) return;
-        checkPageBreak(15);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.setFontSize(12);
-        internalDoc.setTextColor(r, g, b);
-        internalDoc.text(title.toUpperCase(), margin, y);
-        y += 7;
-        internalDoc.setTextColor(30);
-        internalDoc.setFontSize(11);
+
+        y = checkPageBreak(internalDoc, y, 20, 'Plano de Aula', plan.discipline, pageNum);
+        y = drawSectionTitle(internalDoc, title, y);
+
+        internalDoc.setFont(FONTS.body.font, FONTS.body.style);
+        internalDoc.setFontSize(FONTS.body.size);
 
         const items = Array.isArray(rawText) ? rawText : [rawText];
         items.forEach(item => {
             const textToProcess = Array.isArray(rawText) ? `• ${item}` : item;
-            const lines = splitTextWithBold(internalDoc, textToProcess, contentWidth);
+            const lines = splitTextWithBold(internalDoc, textToProcess, PAGE.contentWidth);
             lines.forEach((line: string) => {
-                checkPageBreak(6);
+                y = checkPageBreak(internalDoc, y, 10, 'Plano de Aula', plan.discipline, pageNum);
                 const isEndOfParagraph = line.endsWith('\n');
                 const cleanLine = line.replace('\n', '');
-                y = renderJustifiedBoldText(internalDoc, cleanLine, margin, y, contentWidth, 11, isEndOfParagraph);
+                y = renderJustifiedBoldText(internalDoc, cleanLine, PAGE.margin, y, PAGE.contentWidth, 10, isEndOfParagraph);
                 y += 2;
             });
-            y += 2;
+            y += 2; // Paragraph spacing
         });
-        y += 5;
+        y += 6; // Section spacing
     };
 
     const c = plan.content;
@@ -174,815 +240,382 @@ export const exportLessonToPDF = (plan: LessonPlan, doc?: jsPDF, startY = 30) =>
         addSection('BNCC', c.bnccSkills);
     }
 
-    if (!doc) internalDoc.save(`${plan.title.replace(/ /g, '_')}.pdf`);
+    if (!doc) {
+        drawFooter(internalDoc, pageNum.val);
+        internalDoc.save(`${plan.title.replace(/ /g, '_')}.pdf`);
+    }
     return y;
 };
 
-export const exportLessonsToWord = async (plans: LessonPlan[], filename = "Planos_de_Aula.docx") => {
-    const doc = new Document({
-        sections: plans.map(plan => ({
-            properties: {},
-            children: [
-                new Paragraph({
-                    alignment: AlignmentType.JUSTIFIED,
-                    children: [
-                        new TextRun({ text: plan.title, bold: true, size: 32 }),
-                        new TextRun({ text: `\n${plan.discipline} • ${plan.grade} • ${plan.duration}`, size: 20, break: 1 }),
-                    ],
-                }),
-                ...(plan.content ? [
-                    { t: "Fundamentação", c: plan.content.foundation },
-                    { t: "Objetivo Geral", c: plan.content.generalObjective },
-                    { t: "Objetivos Específicos", c: plan.content.specificObjectives },
-                    { t: "Conteúdo", c: plan.content.content },
-                    { t: "Metodologia", c: plan.content.methodology },
-                    { t: "Avaliação", c: plan.content.evaluation },
-                ].flatMap(s => {
-                    const items = Array.isArray(s.c) ? s.c : [s.c];
-                    return [
-                        new Paragraph({
-                            children: [new TextRun({ text: s.t.toUpperCase(), bold: true, size: 24, color: "7C3AED" })],
-                            spacing: { before: 400, after: 200 }
-                        }),
-                        ...items.map(i => new Paragraph({
-                            alignment: AlignmentType.JUSTIFIED,
-                            children: i.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true, size: 22 });
-                                }
-                                return new TextRun({ text: part, size: 22 });
-                            }),
-                            spacing: { after: 120 }
-                        }))
-                    ];
-                }) : [])
-            ]
-        }))
-    });
-
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, filename);
-};
-
-// --- Annual Plan Exports ---
-
-export const exportAnnualPlanToPDF = (plan: AnnualPlan, doc?: jsPDF, startY = 30) => {
+export const exportAnnualPlanToPDF = (plan: AnnualPlan, doc?: jsPDF, startY = 35) => {
     const internalDoc = doc || new jsPDF();
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
     let y = startY;
-    const [r, g, b] = plan.headerColor ? hexToRgb(plan.headerColor) : [124, 58, 237];
+    let pageNum = { val: 1 };
 
-    if (!doc) {
-        internalDoc.setFillColor(r, g, b);
-        internalDoc.rect(0, 0, pageWidth, 15, 'F');
-        internalDoc.setTextColor(255, 255, 255);
-        internalDoc.setFontSize(10);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.text('PLANEJAEDU - PLANO ANUAL', margin, 10);
-        internalDoc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
-        internalDoc.setTextColor(0);
-    }
+    if (!doc) drawHeader(internalDoc, 'Plano Anual', plan.discipline);
 
-    const checkPageBreak = (height: number) => {
-        if (y + height > pageHeight - 20) {
-            internalDoc.addPage();
-            y = 20;
-        }
-    };
-
-    internalDoc.setFontSize(18);
-    internalDoc.setFont('helvetica', 'bold');
-    internalDoc.text(`Plano Anual: ${plan.discipline}`, margin, y);
+    // Title
+    internalDoc.setFont(FONTS.title.font, FONTS.title.style);
+    internalDoc.setFontSize(FONTS.title.size);
+    internalDoc.text(`Plano Anual: ${plan.discipline}`, PAGE.margin, y);
     y += 8;
     internalDoc.setFontSize(11);
-    internalDoc.setFont('helvetica', 'normal');
-    internalDoc.text(`Série: ${plan.grade}`, margin, y);
-    y += 12;
+    internalDoc.setFont(FONTS.subtitle.font, FONTS.subtitle.style);
+    internalDoc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+    internalDoc.text(`Série: ${plan.grade}`, PAGE.margin, y);
+    internalDoc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    y += 15;
 
     if (plan.planType === 'infantil' && plan.infantilContent) {
         const content = plan.infantilContent;
-
-        // Objetivo Geral
-        checkPageBreak(20);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.setTextColor(r, g, b);
-        internalDoc.text("OBJETIVO GERAL", margin, y);
-        y += 7;
-        internalDoc.setTextColor(30);
-        internalDoc.setFont('helvetica', 'normal');
-        const objLines = splitTextWithBold(internalDoc, content.generalObjective, contentWidth);
+        y = drawSectionTitle(internalDoc, "OBJETIVO GERAL", y);
+        const objLines = splitTextWithBold(internalDoc, content.generalObjective, PAGE.contentWidth);
         objLines.forEach(line => {
-            checkPageBreak(6);
-            const isEndOfParagraph = line.endsWith('\n');
-            const cleanLine = line.replace('\n', '');
-            y = renderJustifiedBoldText(internalDoc, cleanLine, margin, y, contentWidth, 11, isEndOfParagraph);
+            y = checkPageBreak(internalDoc, y, 6, 'Plano Anual', plan.discipline, pageNum);
+            y = renderJustifiedBoldText(internalDoc, line.replace('\n', ''), PAGE.margin, y, PAGE.contentWidth, 10, line.endsWith('\n'));
             y += 2;
         });
-        y += 5;
+        y += 8;
 
-        // Campos de Experiência
         content.experienceFields.forEach(field => {
-            checkPageBreak(30);
-            internalDoc.setFont('helvetica', 'bold');
-            internalDoc.setTextColor(r, g, b);
-            internalDoc.text(field.fieldName.toUpperCase(), margin, y);
-            y += 7;
-            internalDoc.setTextColor(30);
-            internalDoc.setFontSize(10);
+            y = checkPageBreak(internalDoc, y, 30, 'Plano Anual', plan.discipline, pageNum);
+            y = drawSectionTitle(internalDoc, field.fieldName, y);
 
-            const addSubSection = (label: string, items: string[] | string) => {
-                internalDoc.setFont('helvetica', 'bold');
-                internalDoc.text(label, margin + 5, y);
+            const addSubItem = (label: string, text: string | string[]) => {
+                internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+                internalDoc.text(label, PAGE.margin + 2, y);
                 y += 5;
-                internalDoc.setFont('helvetica', 'normal');
-                const rawText = Array.isArray(items) ? items.map(i => `• ${i}`).join('\n') : items;
-                const lines = splitTextWithBold(internalDoc, rawText, contentWidth - 10);
-                lines.forEach(line => {
-                    checkPageBreak(6);
-                    const isEndOfParagraph = line.endsWith('\n');
-                    const cleanLine = line.replace('\n', '');
-                    y = renderJustifiedBoldText(internalDoc, cleanLine, margin + 10, y, contentWidth - 10, 10, isEndOfParagraph);
+                internalDoc.setFont(FONTS.body.font, FONTS.body.style);
+                const raw = Array.isArray(text) ? text.map(t => `• ${t}`).join('\n') : text;
+                const lines = splitTextWithBold(internalDoc, raw, PAGE.contentWidth - 5);
+                lines.forEach(l => {
+                    y = checkPageBreak(internalDoc, y, 6, 'Plano Anual', plan.discipline, pageNum);
+                    y = renderJustifiedBoldText(internalDoc, l.replace('\n', ''), PAGE.margin + 4, y, PAGE.contentWidth - 4, 10, l.endsWith('\n'));
                     y += 2;
                 });
-                y += 3;
+                y += 4;
             };
 
-            addSubSection("Objetivos de Aprendizagem:", field.objectives);
-            addSubSection("Eixos Temáticos:", field.themes);
-            addSubSection("Metodologia:", field.methodology);
-            y += 5;
-            internalDoc.setFontSize(11);
+            addSubItem('Objetivos:', field.objectives);
+            addSubItem('Eixos:', field.themes);
+            addSubItem('Metodologia:', field.methodology);
+            y += 4;
         });
 
-        // Direitos, Materiais, Avaliação
-        const addFinalSection = (title: string, text: string | string[]) => {
-            checkPageBreak(20);
-            internalDoc.setFont('helvetica', 'bold');
-            internalDoc.setTextColor(r, g, b);
-            internalDoc.text(title.toUpperCase(), margin, y);
-            y += 7;
-            internalDoc.setTextColor(30);
-            internalDoc.setFont('helvetica', 'normal');
-            const rawText = Array.isArray(text) ? text.join(', ') : text;
-            const lines = splitTextWithBold(internalDoc, rawText, contentWidth);
-            lines.forEach(line => {
-                checkPageBreak(6);
-                const isEndOfParagraph = line.endsWith('\n');
-                const cleanLine = line.replace('\n', '');
-                y = renderJustifiedBoldText(internalDoc, cleanLine, margin, y, contentWidth, 11, isEndOfParagraph);
-                y += 2;
-            });
-            y += 5;
-        };
-
-        addFinalSection("Direitos de Aprendizagem", content.learningRights);
-        addFinalSection("Recursos Materiais", content.materials);
-        addFinalSection("Avaliação", content.evaluation);
-
     } else if (plan.bimesters) {
-        plan.bimesters.forEach((bim) => {
-            checkPageBreak(30);
-            internalDoc.setFont('helvetica', 'bold');
-            internalDoc.setFontSize(13);
-            internalDoc.setTextColor(r, g, b);
-            internalDoc.text(bim.name.toUpperCase(), margin, y);
-            y += 8;
-            internalDoc.setTextColor(30);
-            internalDoc.setFontSize(11);
+        plan.bimesters.forEach(bim => {
+            y = checkPageBreak(internalDoc, y, 40, 'Plano Anual', plan.discipline, pageNum);
+            y = drawSectionTitle(internalDoc, bim.name, y);
 
-            const addItems = (label: string, items: string[]) => {
-                if (items.length === 0) return;
-                checkPageBreak(10);
-                internalDoc.setFont('helvetica', 'bold');
-                internalDoc.text(label, margin + 5, y);
-                y += 6;
+            const addList = (label: string, items: string[]) => {
+                if (!items.length) return;
+                internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+                internalDoc.text(label, PAGE.margin + 2, y);
+                y += 5;
+                internalDoc.setFont(FONTS.body.font, FONTS.body.style);
                 items.forEach(i => {
-                    const lines = splitTextWithBold(internalDoc, `• ${i}`, contentWidth - 10);
-                    lines.forEach((line: string) => {
-                        checkPageBreak(6);
-                        const isEndOfParagraph = line.endsWith('\n');
-                        const cleanLine = line.replace('\n', '');
-                        y = renderJustifiedBoldText(internalDoc, cleanLine, margin + 10, y, contentWidth - 10, 11, isEndOfParagraph);
+                    y = checkPageBreak(internalDoc, y, 6, 'Plano Anual', plan.discipline, pageNum);
+                    const lines = splitTextWithBold(internalDoc, `• ${i}`, PAGE.contentWidth - 4);
+                    lines.forEach(l => {
+                        y = renderJustifiedBoldText(internalDoc, l.replace('\n', ''), PAGE.margin + 4, y, PAGE.contentWidth - 4, 10, l.endsWith('\n'));
                         y += 2;
                     });
                 });
                 y += 4;
             };
 
-            addItems("Temas:", bim.themes);
-            addItems("Habilidades BNCC:", bim.bnccSkills);
-            addItems("Objetivos:", bim.objectives);
+            addList('Temas:', bim.themes);
+            addList('Habilidades:', bim.bnccSkills);
+            addList('Objetivos:', bim.objectives);
 
-            checkPageBreak(15);
-            internalDoc.setFont('helvetica', 'bold');
-            internalDoc.text("Avaliação:", margin + 5, y);
-            y += 6;
-            const evalLines = splitTextWithBold(internalDoc, bim.evaluation, contentWidth - 10);
-            evalLines.forEach((line: string) => {
-                checkPageBreak(6);
-                const isEndOfParagraph = line.endsWith('\n');
-                const cleanLine = line.replace('\n', '');
-                y = renderJustifiedBoldText(internalDoc, cleanLine, margin + 10, y, contentWidth - 10, 11, isEndOfParagraph);
+            internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+            internalDoc.text("Avaliação:", PAGE.margin + 2, y);
+            y += 5;
+            const evalLines = splitTextWithBold(internalDoc, bim.evaluation, PAGE.contentWidth - 4);
+            evalLines.forEach(l => {
+                y = checkPageBreak(internalDoc, y, 6, 'Plano Anual', plan.discipline, pageNum);
+                y = renderJustifiedBoldText(internalDoc, l.replace('\n', ''), PAGE.margin + 4, y, PAGE.contentWidth - 4, 10, l.endsWith('\n'));
                 y += 2;
             });
-            y += 10;
+            y += 8;
         });
     }
 
-    if (!doc) internalDoc.save(`Plano_Anual_${plan.discipline}.pdf`);
+    if (!doc) {
+        drawFooter(internalDoc, pageNum.val);
+        internalDoc.save(`Plano_Anual_${plan.discipline}.pdf`);
+    }
     return y;
 };
 
-export const exportAnnualPlansToWord = async (plans: AnnualPlan[], filename = "Planos_Anuais.docx") => {
-    const doc = new Document({
-        sections: plans.map(plan => ({
-            properties: {},
-            children: [
-                new Paragraph({
-                    children: [
-                        new TextRun({ text: `Plano Anual: ${plan.discipline}`, bold: true, size: 32 }),
-                        new TextRun({ text: `\nSérie: ${plan.grade}`, size: 24, break: 1 }),
-                    ],
-                }),
-                ...(plan.planType === 'infantil' && plan.infantilContent ? [
-                    new Paragraph({
-                        children: [new TextRun({ text: "OBJETIVO GERAL", bold: true, size: 28, color: "7C3AED" })],
-                        spacing: { before: 400, after: 200 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: plan.infantilContent.generalObjective.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                            if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                return new TextRun({ text: content, bold: true });
-                            }
-                            return new TextRun({ text: part });
-                        }),
-                        spacing: { after: 200 }
-                    }),
-                    ...plan.infantilContent.experienceFields.flatMap(field => [
-                        new Paragraph({
-                            children: [new TextRun({ text: field.fieldName.toUpperCase(), bold: true, size: 26, color: "7C3AED" })],
-                            spacing: { before: 300, after: 150 }
-                        }),
-                        new Paragraph({
-                            alignment: AlignmentType.JUSTIFIED,
-                            children: [
-                                new TextRun({ text: "Objetivos de Aprendizagem: ", bold: true }),
-                                new TextRun({ text: field.objectives.join(", ") })
-                            ],
-                            spacing: { after: 120 }
-                        }),
-                        new Paragraph({
-                            alignment: AlignmentType.JUSTIFIED,
-                            children: [
-                                new TextRun({ text: "Eixos Temáticos: ", bold: true }),
-                                new TextRun({ text: field.themes.join(", ") })
-                            ],
-                            spacing: { after: 120 }
-                        }),
-                        new Paragraph({
-                            alignment: AlignmentType.JUSTIFIED,
-                            children: [
-                                new TextRun({ text: "Metodologia: ", bold: true }),
-                                ...field.methodology.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                    if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                        const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                        return new TextRun({ text: content, bold: true });
-                                    }
-                                    return new TextRun({ text: part });
-                                })
-                            ],
-                            spacing: { after: 200 }
-                        }),
-                    ]),
-                    new Paragraph({
-                        children: [new TextRun({ text: "DIREITOS DE APRENDIZAGEM", bold: true, size: 24 })],
-                        spacing: { before: 400, after: 200 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [new TextRun({ text: plan.infantilContent.learningRights.join(", ") })],
-                        spacing: { after: 200 }
-                    }),
-                    new Paragraph({
-                        children: [new TextRun({ text: "RECURSOS MATERIAIS", bold: true, size: 24 })],
-                        spacing: { before: 200, after: 200 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [new TextRun({ text: plan.infantilContent.materials.join(", ") })],
-                        spacing: { after: 200 }
-                    }),
-                    new Paragraph({
-                        children: [new TextRun({ text: "AVALIAÇÃO", bold: true, size: 24 })],
-                        spacing: { before: 200, after: 200 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: plan.infantilContent.evaluation.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                            if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                return new TextRun({ text: content, bold: true });
-                            }
-                            return new TextRun({ text: part });
-                        }),
-                        spacing: { after: 200 }
-                    }),
-                ] : (plan.bimesters || []).flatMap(bim => [
-                    new Paragraph({
-                        children: [new TextRun({ text: bim.name.toUpperCase(), bold: true, size: 28, color: "7C3AED" })],
-                        spacing: { before: 400, after: 200 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: "Temas: ", bold: true }),
-                            ...bim.themes.join(", ").split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true });
-                                }
-                                return new TextRun({ text: part });
-                            })
-                        ]
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: "Habilidades: ", bold: true }),
-                            new TextRun({ text: bim.bnccSkills.join(", ") })
-                        ]
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: "Avaliação: ", bold: true }),
-                            ...bim.evaluation.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true });
-                                }
-                                return new TextRun({ text: part });
-                            })
-                        ]
-                    }),
-                ]))
-            ]
-        }))
-    });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, filename);
-};
-
-// --- Didactic Sequence Exports ---
-
-export const exportSequenceToPDF = (sequence: DidacticSequence, doc?: jsPDF, startY = 30) => {
+export const exportSequenceToPDF = (sequence: DidacticSequence, doc?: jsPDF, startY = 35) => {
     const internalDoc = doc || new jsPDF();
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
     let y = startY;
+    let pageNum = { val: 1 };
 
-    const [r, g, b] = sequence.headerColor ? hexToRgb(sequence.headerColor) : [124, 58, 237];
+    if (!doc) drawHeader(internalDoc, 'Sequência Didática', sequence.theme);
 
-    if (!doc) {
-        internalDoc.setFillColor(r, g, b);
-        internalDoc.rect(0, 0, pageWidth, 15, 'F');
-        internalDoc.setTextColor(255, 255, 255);
-        internalDoc.setFontSize(10);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.text('PLANEJAEDU - SEQUÊNCIA DIDÁTICA', margin, 10);
-        internalDoc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
-        internalDoc.setTextColor(0);
-    }
+    internalDoc.setFont(FONTS.title.font, FONTS.title.style);
+    internalDoc.setFontSize(FONTS.title.size);
+    const titleLines = internalDoc.splitTextToSize(sequence.theme || 'Sem Título', PAGE.contentWidth);
+    internalDoc.text(titleLines, PAGE.margin, y);
+    y += (titleLines.length * 8) + 4;
 
-    const checkPageBreak = (height: number) => {
-        if (y + height > pageHeight - 20) {
-            internalDoc.addPage();
-            y = 20;
-        }
-    };
-
-    internalDoc.setFontSize(18);
-    internalDoc.setFont('helvetica', 'bold');
-    internalDoc.text(`Sequência Didática: ${sequence.theme}`, margin, y);
-    y += 8;
     internalDoc.setFontSize(11);
-    internalDoc.setFont('helvetica', 'normal');
-    internalDoc.text(`Duração: ${sequence.numClasses} aulas`, margin, y);
-    y += 12;
+    internalDoc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+    internalDoc.text(`Duração Total: ${sequence.numClasses} aulas`, PAGE.margin, y);
+    internalDoc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    y += 15;
 
-    sequence.classes.forEach(c => {
-        checkPageBreak(25);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.setFontSize(12);
-        internalDoc.setTextColor(r, g, b);
-        internalDoc.text(`AULA ${c.classNumber}: ${c.topic}`, margin, y);
-        y += 7;
-        internalDoc.setTextColor(30);
-        internalDoc.setFontSize(11);
-        internalDoc.setFont('helvetica', 'normal');
+    if (sequence.classes && Array.isArray(sequence.classes)) {
+        sequence.classes.forEach(c => {
+            y = checkPageBreak(internalDoc, y, 30, 'Sequência Didática', sequence.theme, pageNum);
+            y = drawSectionTitle(internalDoc, `AULA ${c.classNumber}: ${c.topic}`, y);
 
-        const addItems = (label: string, items: string[]) => {
-            if (items.length === 0) return;
-            internalDoc.setFont('helvetica', 'bold');
-            internalDoc.text(label, margin + 5, y);
-            y += 5;
-            items.forEach(i => {
-                const lines = splitTextWithBold(internalDoc, `- ${i}`, contentWidth - 10);
-                lines.forEach((line: string) => {
-                    checkPageBreak(6);
-                    const isEndOfParagraph = line.endsWith('\n');
-                    const cleanLine = line.replace('\n', '');
-                    y = renderJustifiedBoldText(internalDoc, cleanLine, margin + 10, y, contentWidth - 10, 11, isEndOfParagraph);
-                    y += 2;
+            const addList = (label: string, items: string[]) => {
+                if (!items || !Array.isArray(items) || !items.length) return;
+                internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+                internalDoc.text(label, PAGE.margin + 2, y);
+                y += 5;
+                internalDoc.setFont(FONTS.body.font, FONTS.body.style);
+                items.forEach(i => {
+                    const lines = splitTextWithBold(internalDoc, `• ${i}`, PAGE.contentWidth - 4);
+                    lines.forEach(l => {
+                        y = checkPageBreak(internalDoc, y, 6, 'Sequência Didática', sequence.theme, pageNum);
+                        y = renderJustifiedBoldText(internalDoc, l.replace('\n', ''), PAGE.margin + 4, y, PAGE.contentWidth - 4, 10, l.endsWith('\n'));
+                        y += 2;
+                    });
                 });
-            });
-            y += 2;
-        };
+                y += 4;
+            };
 
-        addItems("Atividades:", c.activities);
-        addItems("Recursos:", c.resources);
-        y += 6;
-    });
+            addList("Atividades:", c.activities);
+            addList("Recursos:", c.resources);
+            y += 4;
+        });
+    }
 
-    if (!doc) internalDoc.save(`Sequencia_${sequence.theme.replace(/ /g, '_')}.pdf`);
+    if (!doc) {
+        drawFooter(internalDoc, pageNum.val);
+        internalDoc.save(`Sequencia_${(sequence.theme || 'Untitled').replace(/ /g, '_')}.pdf`);
+    }
     return y;
 };
 
-export const exportSequencesToWord = async (sequences: DidacticSequence[], filename = "Sequencias_Didaticas.docx") => {
-    const doc = new Document({
-        sections: sequences.map(seq => ({
-            properties: {},
-            children: [
-                new Paragraph({
-                    children: [
-                        new TextRun({ text: `Sequência Didática: ${seq.theme}`, bold: true, size: 32 }),
-                        new TextRun({ text: `\nDuração: ${seq.numClasses} aulas`, size: 24, break: 1 }),
-                    ],
-                }),
-                ...seq.classes.flatMap(c => [
+export const exportSequencesToWord = async (sequences: DidacticSequence[], filename = "Sequencias.docx") => {
+    const sections = sequences.map(seq => {
+        const children = [
+            new Paragraph({
+                children: [new TextRun({ text: seq.theme || 'Sem Título', bold: true, size: 36, color: "4F46E5" })],
+                spacing: { after: 200 }
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: `Duração: ${seq.numClasses} aulas`, size: 24, color: "6B7280" })],
+                spacing: { after: 400 }
+            })
+        ];
+
+        if (seq.classes && Array.isArray(seq.classes)) {
+            seq.classes.forEach(c => {
+                // Class Header
+                children.push(
                     new Paragraph({
-                        children: [new TextRun({ text: `AULA ${c.classNumber}: ${c.topic}`, bold: true, size: 26, color: "7C3AED" })],
-                        spacing: { before: 300, after: 150 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: "Atividades: ", bold: true }),
-                            ...c.activities.join(", ").split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true });
-                                }
-                                return new TextRun({ text: part });
-                            })
-                        ]
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: "Recursos: ", bold: true }),
-                            ...c.resources.join(", ").split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true });
-                                }
-                                return new TextRun({ text: part });
-                            })
-                        ]
-                    }),
-                ]),
-                new Paragraph({
-                    children: [new TextRun({ text: "\nAvaliação Final Sugerida:", bold: true, size: 24 })],
-                    spacing: { before: 400 }
-                }),
-                new Paragraph({
-                    alignment: AlignmentType.JUSTIFIED,
-                    children: seq.finalEvaluation.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                        if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                            const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                            return new TextRun({ text: content, bold: true });
-                        }
-                        return new TextRun({ text: part });
+                        children: [new TextRun({ text: `AULA ${c.classNumber}: ${c.topic}`, bold: true, size: 28, color: "1F2937" })],
+                        spacing: { before: 300, after: 200 },
+                        border: { bottom: { color: "E5E7EB", space: 1, style: BorderStyle.SINGLE, size: 6 } }
                     })
-                })
-            ]
-        }))
+                );
+
+                // Activities
+                if (c.activities && c.activities.length) {
+                    children.push(new Paragraph({ children: [new TextRun({ text: "Atividades:", bold: true, size: 24 })], spacing: { after: 100 } }));
+                    c.activities.forEach(act => {
+                        children.push(new Paragraph({ children: [new TextRun({ text: `• ${act}`, size: 24 })], spacing: { after: 50 }, indent: { left: 400 } }));
+                    });
+                }
+
+                // Resources
+                if (c.resources && c.resources.length) {
+                    children.push(new Paragraph({ children: [new TextRun({ text: "Recursos:", bold: true, size: 24 })], spacing: { before: 200, after: 100 } }));
+                    c.resources.forEach(res => {
+                        children.push(new Paragraph({ children: [new TextRun({ text: `• ${res}`, size: 24 })], spacing: { after: 50 }, indent: { left: 400 } }));
+                    });
+                }
+            });
+        }
+
+        // Final Evaluation
+        if (seq.finalEvaluation) {
+            children.push(new Paragraph({ children: [new TextRun({ text: "Avaliação Final:", bold: true, size: 28, color: "1F2937" })], spacing: { before: 400, after: 200 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: seq.finalEvaluation, size: 24 })] }));
+        }
+
+        return {
+            properties: {},
+            children: children
+        };
     });
+
+    const doc = new Document({ sections });
     const blob = await Packer.toBlob(doc);
     saveAs(blob, filename);
 };
-
-// --- Assessment Exports ---
-
-export const exportAssessmentToPDF = (assessment: Assessment, doc?: jsPDF, startY = 30) => {
+export const exportAssessmentToPDF = (assessment: Assessment, doc?: jsPDF, startY = 35) => {
     const internalDoc = doc || new jsPDF();
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
     let y = startY;
+    let pageNum = { val: 1 };
 
-    const [r, g, b] = assessment.headerColor ? hexToRgb(assessment.headerColor) : [124, 58, 237];
+    if (!doc) drawHeader(internalDoc, 'Avaliação', assessment.discipline);
 
-    if (!doc) {
-        internalDoc.setFillColor(r, g, b);
-        internalDoc.rect(0, 0, pageWidth, 15, 'F');
-        internalDoc.setTextColor(255, 255, 255);
-        internalDoc.setFontSize(10);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.text('PLANEJAEDU - AVALIAÇÃO', margin, 10);
-        internalDoc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
-        internalDoc.setTextColor(0);
-    }
-
-    const checkPageBreak = (height: number) => {
-        if (y + height > pageHeight - 20) {
-            internalDoc.addPage();
-            y = 20;
-        }
-    };
-
-    internalDoc.setFontSize(18);
-    internalDoc.setFont('helvetica', 'bold');
-    internalDoc.text(assessment.title, margin, y);
+    // Title Block
+    internalDoc.setFont(FONTS.title.font, FONTS.title.style);
+    internalDoc.setFontSize(FONTS.title.size);
+    internalDoc.text(assessment.title, PAGE.margin, y);
     y += 8;
     internalDoc.setFontSize(11);
-    internalDoc.setFont('helvetica', 'normal');
-    internalDoc.text(`${assessment.type} • ${assessment.discipline} • ${assessment.grade}`, margin, y);
-    y += 12;
+    internalDoc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+    internalDoc.text(`${assessment.type} • ${assessment.discipline} • ${assessment.grade}`, PAGE.margin, y);
+    internalDoc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    y += 15;
+
+    // Student Name Box
+    internalDoc.setDrawColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+    internalDoc.rect(PAGE.margin, y, PAGE.contentWidth, 12);
+    internalDoc.setFontSize(10);
+    internalDoc.text("Nome: __________________________________________________________________  Data: ___/___/___", PAGE.margin + 4, y + 8);
+    y += 24;
 
     if (assessment.questions) {
+        y = drawSectionTitle(internalDoc, "QUESTÕES", y);
+        y += 5;
+
         assessment.questions.forEach((q, index) => {
-            const questionHeader = `${index + 1}. ${q.text}`;
-            internalDoc.setFont('helvetica', 'bold');
-            const questionLines = splitTextWithBold(internalDoc, questionHeader, contentWidth);
-            questionLines.forEach((line: string) => {
-                checkPageBreak(6);
-                const isEndOfParagraph = line.endsWith('\n');
+            y = checkPageBreak(internalDoc, y, 30, 'Avaliação', assessment.discipline, pageNum);
+
+            // Question Header
+            internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+            internalDoc.text(`${index + 1}.`, PAGE.margin, y);
+
+            const qLines = splitTextWithBold(internalDoc, q.text, PAGE.contentWidth - 10);
+            qLines.forEach(line => {
                 const cleanLine = line.replace('\n', '');
-                y = renderJustifiedBoldText(internalDoc, cleanLine, margin, y, contentWidth, 11, isEndOfParagraph);
+                y = renderJustifiedBoldText(internalDoc, cleanLine, PAGE.margin + 8, y, PAGE.contentWidth - 10, 10, line.endsWith('\n'));
                 y += 2;
             });
-            internalDoc.setFont('helvetica', 'normal');
+            y += 4;
+
+            internalDoc.setFont(FONTS.body.font, FONTS.body.style);
 
             if (q.type === 'multiple_choice' && q.options) {
                 q.options.forEach(opt => {
-                    const optLines = internalDoc.splitTextToSize(`(  ) ${opt}`, contentWidth - 10);
-                    checkPageBreak(optLines.length * 6);
-                    internalDoc.text(optLines, margin + 5, y);
-                    y += optLines.length * 6;
+                    const optText = `(   )  ${opt}`;
+                    const optLines = internalDoc.splitTextToSize(optText, PAGE.contentWidth - 12);
+                    y = checkPageBreak(internalDoc, y, optLines.length * 6, 'Avaliação', assessment.discipline, pageNum);
+                    internalDoc.text(optLines, PAGE.margin + 8, y);
+                    y += (optLines.length * 6) + 2;
                 });
-                y += 4;
             } else if (q.type === 'essay') {
-                checkPageBreak(22);
-                internalDoc.rect(margin, y, contentWidth, 20);
-                y += 24;
+                y = checkPageBreak(internalDoc, y, 30, 'Avaliação', assessment.discipline, pageNum);
+                // Dotted lines
+                for (let i = 0; i < 5; i++) {
+                    internalDoc.text("____________________________________________________________________________________________", PAGE.margin + 8, y);
+                    y += 8;
+                }
             }
+            y += 6;
         });
     }
 
     if (assessment.rubric) {
-        checkPageBreak(15);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.setFontSize(14);
-        internalDoc.setTextColor(r, g, b);
-        internalDoc.text("RUBRICA DE AVALIAÇÃO", margin, y);
-        y += 8;
-        internalDoc.setTextColor(0);
-        internalDoc.setFontSize(11);
+        y = checkPageBreak(internalDoc, y, 40, 'Avaliação', assessment.discipline, pageNum);
+        y = drawSectionTitle(internalDoc, "CRITÉRIOS DE AVALIAÇÃO (RUBRICA)", y);
 
         assessment.rubric.forEach(criteria => {
-            checkPageBreak(15);
-            internalDoc.setFont('helvetica', 'bold');
-            internalDoc.text(criteria.criteria, margin, y);
+            y = checkPageBreak(internalDoc, y, 20, 'Avaliação', assessment.discipline, pageNum);
+            internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+            internalDoc.text(criteria.criteria, PAGE.margin, y);
             y += 6;
-            internalDoc.setFont('helvetica', 'normal');
 
+            internalDoc.setFont(FONTS.body.font, FONTS.body.style);
             criteria.levels.forEach(l => {
+                y = checkPageBreak(internalDoc, y, 10, 'Avaliação', assessment.discipline, pageNum);
                 const text = `${l.level}: ${l.description}`;
-                const lines = internalDoc.splitTextToSize(text, contentWidth - 10);
-                checkPageBreak(lines.length * 6);
-                internalDoc.text(lines, margin + 5, y);
-                y += lines.length * 6;
+                const lines = internalDoc.splitTextToSize(text, PAGE.contentWidth - 5);
+                internalDoc.text(lines, PAGE.margin + 5, y);
+                y += (lines.length * 5) + 2;
             });
             y += 4;
         });
     }
 
-    if (!doc) internalDoc.save(`${assessment.title.replace(/ /g, '_')}.pdf`);
+    if (!doc) {
+        drawFooter(internalDoc, pageNum.val);
+        internalDoc.save(`${assessment.title.replace(/ /g, '_')}.pdf`);
+    }
     return y;
 };
 
-export const exportAssessmentsToWord = async (assessments: Assessment[], filename = "Avaliacoes.docx") => {
-    const doc = new Document({
-        sections: assessments.map(assessment => ({
-            properties: {},
-            children: [
-                new Paragraph({
-                    children: [
-                        new TextRun({ text: assessment.title, bold: true, size: 32 }),
-                        new TextRun({ text: `\n${assessment.type} • ${assessment.discipline} • ${assessment.grade}`, size: 24, break: 1 }),
-                    ],
-                }),
-                ...(assessment.questions ? assessment.questions.flatMap((q, i) => [
-                    new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: `${i + 1}. `, bold: true, size: 22 }),
-                            ...q.text.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true, size: 22 });
-                                }
-                                return new TextRun({ text: part, size: 22 });
-                            })
-                        ],
-                        spacing: { before: 300, after: 150 }
-                    }),
-                    ...(q.type === 'multiple_choice' && q.options ? q.options.map(opt => new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: `(  ) ` }),
-                            ...opt.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true });
-                                }
-                                return new TextRun({ text: part });
-                            })
-                        ],
-                        spacing: { after: 100 },
-                        indent: { left: 720 }
-                    })) : [new Paragraph({ text: "__________________________________________________________________________", spacing: { after: 400 } })])
-                ]) : []),
-                ...(assessment.rubric ? assessment.rubric.flatMap(c => [
-                    new Paragraph({
-                        children: [new TextRun({ text: c.criteria, bold: true, size: 24, color: "7C3AED" })],
-                        spacing: { before: 400, after: 200 }
-                    }),
-                    ...c.levels.map(l => new Paragraph({
-                        alignment: AlignmentType.JUSTIFIED,
-                        children: [
-                            new TextRun({ text: `${l.level}: `, bold: true }),
-                            ...l.description.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                                    const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                                    return new TextRun({ text: content, bold: true });
-                                }
-                                return new TextRun({ text: part });
-                            })
-                        ],
-                        bullet: { level: 0 },
-                        spacing: { after: 100 }
-                    }))
-                ]) : [])
-            ]
-        }))
-    });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, filename);
-};
-
-// --- Report Exports ---
-
-export const exportReportToPDF = (report: AppReport, doc?: jsPDF, startY = 30) => {
+export const exportReportToPDF = (report: AppReport, doc?: jsPDF, startY = 35) => {
     const internalDoc = doc || new jsPDF();
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
     let y = startY;
-    const [r, g, b] = [124, 58, 237]; // Default Primary Color
+    let pageNum = { val: 1 };
 
-    if (!doc) {
-        internalDoc.setFillColor(r, g, b);
-        internalDoc.rect(0, 0, pageWidth, 15, 'F');
-        internalDoc.setTextColor(255, 255, 255);
-        internalDoc.setFontSize(10);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.text('PLANEJAEDU - RELATÓRIO INDIVIDUAL', margin, 10);
-        internalDoc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
-        internalDoc.setTextColor(0);
-    }
+    if (!doc) drawHeader(internalDoc, 'Relatório Individual', report.studentName);
 
-    const checkPageBreak = (height: number) => {
-        if (y + height > pageHeight - 20) {
-            internalDoc.addPage();
-            y = 20;
-        }
-    };
-
-    internalDoc.setFontSize(18);
-    internalDoc.setFont('helvetica', 'bold');
-    internalDoc.setTextColor(r, g, b);
-    internalDoc.text(`Relatório: ${report.studentName}`, margin, y);
-    internalDoc.setTextColor(0);
+    internalDoc.setFont(FONTS.title.font, FONTS.title.style);
+    internalDoc.setFontSize(FONTS.title.size);
+    internalDoc.text(`Relatório: ${report.studentName}`, PAGE.margin, y);
     y += 8;
     internalDoc.setFontSize(11);
-    internalDoc.setFont('helvetica', 'normal');
-    internalDoc.text(`${report.grade} • ${report.period}`, margin, y);
+    internalDoc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+    internalDoc.text(`${report.grade} • ${report.period}`, PAGE.margin, y);
+    internalDoc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
     y += 15;
 
-    const lines = splitTextWithBold(internalDoc, report.content, contentWidth);
+    const lines = splitTextWithBold(internalDoc, report.content, PAGE.contentWidth);
     lines.forEach((line: string) => {
-        checkPageBreak(6);
+        y = checkPageBreak(internalDoc, y, 6, 'Relatório Individual', report.studentName, pageNum);
         const isEndOfParagraph = line.endsWith('\n');
         const cleanLine = line.replace('\n', '');
-        y = renderJustifiedBoldText(internalDoc, cleanLine, margin, y, contentWidth, 11, isEndOfParagraph);
+        y = renderJustifiedBoldText(internalDoc, cleanLine, PAGE.margin, y, PAGE.contentWidth, 10, isEndOfParagraph);
         y += 2;
     });
 
-    if (!doc) internalDoc.save(`Relatorio_${report.studentName.replace(/ /g, '_')}.pdf`);
+    if (!doc) {
+        drawFooter(internalDoc, pageNum.val);
+        internalDoc.save(`Relatorio_${report.studentName.replace(/ /g, '_')}.pdf`);
+    }
     return y;
 };
 
-export const exportReportsToWord = async (reports: AppReport[], filename = "Relatorios_Individuais.docx") => {
-    const doc = new Document({
-        sections: reports.map(report => ({
-            properties: {},
-            children: [
-                new Paragraph({
-                    children: [
-                        new TextRun({ text: `Relatório Individual: ${report.studentName}`, bold: true, size: 32 }),
-                        new TextRun({ text: `\n${report.grade} • ${report.period}`, size: 24, break: 1 }),
-                    ],
-                    spacing: { after: 400 }
-                }),
-                ...report.content.split('\n').map(line => new Paragraph({
-                    alignment: AlignmentType.JUSTIFIED,
-                    children: line.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                        if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                            const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                            return new TextRun({ text: content, bold: true, size: 22 });
-                        }
-                        return new TextRun({ text: part, size: 22 });
-                    }),
-                    spacing: { after: 200 }
-                }))
-            ]
-        }))
-    });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, filename);
-};
+// --- RESTORED EXPORTS (MARKDOWN / WORD / PPTX) ---
 
 export const exportMarkdownToPDF = (title: string, markdown: string, filename: string) => {
     const internalDoc = new jsPDF();
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
-    let y = 30;
+    let y = 35;
+    let pageNum = { val: 1 };
 
-    const addHeader = () => {
-        internalDoc.setFillColor(124, 58, 237);
-        internalDoc.rect(0, 0, pageWidth, 15, 'F');
-        internalDoc.setTextColor(255, 255, 255);
-        internalDoc.setFontSize(10);
-        internalDoc.setFont('helvetica', 'bold');
-        internalDoc.text('PLANEJAEDU - RECURSO PEDAGÓGICO', margin, 10);
-        internalDoc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
-        internalDoc.setTextColor(0);
-    };
+    drawHeader(internalDoc, 'Recurso Pedagógico', title);
 
-    addHeader();
-
-    const checkPageBreak = (height: number) => {
-        if (y + height > pageHeight - 20) {
-            internalDoc.addPage();
-            y = 20;
-            addHeader();
-        }
-    };
-
-    // Title
-    internalDoc.setFontSize(18);
-    internalDoc.setFont('helvetica', 'bold');
-    const titleLines = internalDoc.splitTextToSize(title, contentWidth);
-    internalDoc.text(titleLines, margin, y);
+    internalDoc.setFont(FONTS.title.font, FONTS.title.style);
+    internalDoc.setFontSize(FONTS.title.size);
+    const titleLines = internalDoc.splitTextToSize(title, PAGE.contentWidth);
+    internalDoc.text(titleLines, PAGE.margin, y);
     y += (titleLines.length * 8) + 10;
 
-    // Content
-    internalDoc.setFontSize(11);
-    internalDoc.setFont('helvetica', 'normal');
+    internalDoc.setFont(FONTS.body.font, FONTS.body.style);
+    internalDoc.setFontSize(FONTS.body.size);
 
-    const lines = splitTextWithBold(internalDoc, markdown, contentWidth);
+    const lines = splitTextWithBold(internalDoc, markdown, PAGE.contentWidth);
     lines.forEach((line: string) => {
-        checkPageBreak(6);
+        y = checkPageBreak(internalDoc, y, 6, 'Recurso Pedagógico', title, pageNum);
         const isEndOfParagraph = line.endsWith('\n');
         const cleanLine = line.replace('\n', '');
-        y = renderJustifiedBoldText(internalDoc, cleanLine, margin, y, contentWidth, 11, isEndOfParagraph);
+        y = renderJustifiedBoldText(internalDoc, cleanLine, PAGE.margin, y, PAGE.contentWidth, 10, isEndOfParagraph);
         y += 2;
     });
 
+    drawFooter(internalDoc, pageNum.val);
     internalDoc.save(`${filename}.pdf`);
 };
 
@@ -993,7 +626,7 @@ export const exportMarkdownToWord = async (title: string, markdown: string, file
             children: [
                 new Paragraph({
                     children: [
-                        new TextRun({ text: title, bold: true, size: 36, color: "7C3AED" }),
+                        new TextRun({ text: title, bold: true, size: 36, color: "4F46E5" }),
                     ],
                     spacing: { after: 400 }
                 }),
@@ -1020,7 +653,6 @@ export const exportMarkdownToPPTX = async (title: string, markdown: string, file
     const pptx = new pptxgen();
     pptx.layout = 'LAYOUT_16x9';
 
-    // Helper to clean markers and avoid "Slide X"
     const cleanContent = (text: string) => text
         .replace(/\[TÍTULO DO SLIDE\]/i, '')
         .replace(/\[KEYWORD:.*?\]/i, '')
@@ -1029,115 +661,34 @@ export const exportMarkdownToPPTX = async (title: string, markdown: string, file
         .replace(/\*\*|\*|#|\[|\]/g, '')
         .trim();
 
-    // Helper to fetch images with fallbacks
-    const fetchImage = async (keywords: string): Promise<string | null> => {
-        const query = encodeURIComponent(keywords.replace(/\s+/g, ','));
-        // NOTE: Source Unsplash is often more reliable than LoremFlickr for specific keywords
-        const sources = [
-            `https://source.unsplash.com/featured/1200x800/?${query}`,
-            `https://loremflickr.com/1200/800/${query}`,
-            `https://picsum.photos/1200/800`
-        ];
-
-        for (const url of sources) {
-            try {
-                const response = await fetch(url);
-                if (response.ok) {
-                    const blob = await response.blob();
-                    return new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result as string);
-                        reader.readAsDataURL(blob);
-                    });
-                }
-            } catch (e) {
-                console.warn(`Failed to fetch from ${url}`, e);
-            }
-        }
-        return null;
-    };
-
-    // Split by new delimiter or fallback
     const slides = markdown.includes('---SPLIT---')
         ? markdown.split('---SPLIT---')
         : markdown.split(/(?:^|\n)Slide\s+\d+:?/i);
 
     const processedSlides = slides.filter(s => s.trim().length > 10);
 
-    // 1. Cover Slide
     const coverData = processedSlides[0] || markdown;
     const coverTitle = cleanContent(coverData.split('\n')[0]) || title;
     const coverSlide = pptx.addSlide();
     coverSlide.background = { color: '0F172A' };
 
-    const coverImg = await fetchImage(coverTitle);
-    if (coverImg) {
-        coverSlide.addImage({ data: coverImg, x: 0, y: 0, w: '100%', h: '100%' });
-    }
+    coverSlide.addText('PlanejaEdu AI', { x: '5%', y: '10%', fontSize: 14, color: 'A78BFA', bold: true });
+    coverSlide.addText(coverTitle.toUpperCase(), { x: '5%', y: '40%', w: '90%', fontSize: 44, color: 'FFFFFF', bold: true, align: 'center' });
 
-    coverSlide.addText('PlanejaEdu AI', {
-        x: '5%', y: '10%', fontSize: 14, color: 'A78BFA', bold: true, fontFace: 'Helvetica'
-    });
-
-    coverSlide.addText(coverTitle.toUpperCase(), {
-        x: '5%', y: '40%', w: '90%', fontSize: 54, color: 'FFFFFF', bold: true, align: 'center', fontFace: 'Helvetica'
-    });
-
-    // 2. Content Slides
     for (let i = 1; i < processedSlides.length; i++) {
         const rawContent = processedSlides[i];
         const lines = rawContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-        const slideTitle = cleanContent(lines[0] || 'Tópico');
-        const keywordMatch = rawContent.match(/KEYWORD:\s*([^\]\n]+)/i);
-        const keywords = keywordMatch ? keywordMatch[1] : slideTitle;
-
-        const contentLines = lines.slice(1)
-            .filter(l => !l.toLowerCase().includes('keyword:'))
-            .map(l => cleanContent(l));
+        const slideTitle = cleanContent(lines[0] || 'Conteúdo');
+        const contentLines = lines.slice(1).map(l => cleanContent(l));
 
         const slideObj = pptx.addSlide();
-        const slideImg = await fetchImage(keywords);
-        const isEven = i % 2 === 0;
+        slideObj.addText(slideTitle.toUpperCase(), { x: '5%', y: '10%', w: '90%', fontSize: 24, color: '4F46E5', bold: true });
 
-        // Dynamic Font Scaling
-        const totalCharCount = contentLines.join('').length;
-        const fontSize = totalCharCount > 300 ? 12 : totalCharCount > 150 ? 14 : 18;
-
-        if (slideImg) {
-            if (isEven) {
-                // Layout: Image Left
-                slideObj.addImage({ data: slideImg, x: 0, y: 0, w: '45%', h: '100%' });
-                slideObj.addText(slideTitle.toUpperCase(), {
-                    x: '50%', y: '15%', w: '45%', fontSize: 28, color: '7C3AED', bold: true, fontFace: 'Helvetica'
-                });
-                slideObj.addText(contentLines.join('\n\n'), {
-                    x: '50%', y: '35%', w: '45%', h: '55%', fontSize: fontSize, color: '334155', valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica'
-                });
-            } else {
-                // Layout: Image Right
-                slideObj.addImage({ data: slideImg, x: '55%', y: 0, w: '45%', h: '100%' });
-                slideObj.addText(slideTitle.toUpperCase(), {
-                    x: '5%', y: '15%', w: '45%', fontSize: 28, color: '7C3AED', bold: true, fontFace: 'Helvetica'
-                });
-                slideObj.addText(contentLines.join('\n\n'), {
-                    x: '5%', y: '35%', w: '45%', h: '55%', fontSize: fontSize, color: '334155', valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica'
-                });
-            }
-        } else {
-            // Layout: Full centered
-            slideObj.addText(slideTitle.toUpperCase(), {
-                x: '5%', y: '15%', w: '90%', fontSize: 34, color: '7C3AED', bold: true, align: 'center', fontFace: 'Helvetica'
-            });
-            slideObj.addText(contentLines.join('\n\n'), {
-                x: '10%', y: '35%', w: '80%', h: '50%', fontSize: fontSize + 2, color: '334155', valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica', align: 'left'
-            });
-        }
-
-        // Branding
-        slideObj.addText('planejaedu.com.br', {
-            x: '5%', y: '92%', w: '90%', fontSize: 9, color: 'CBD5E1', align: 'right', fontFace: 'Helvetica'
+        slideObj.addText(contentLines.join('\n\n'), {
+            x: '5%', y: '25%', w: '90%', h: '65%', fontSize: 16, color: '334155', valign: 'top', bullet: { indent: 15 }
         });
+
+        slideObj.addText('PlanejaEdu AI', { x: '5%', y: '92%', w: '90%', fontSize: 9, color: 'CBD5E1', align: 'right' });
     }
 
     await pptx.writeFile({ fileName: `${filename}.pptx` });
@@ -1147,113 +698,67 @@ export const exportJSONToPPTX = async (presentation: any, filename: string) => {
     const pptx = new pptxgen();
     pptx.layout = 'LAYOUT_16x9';
 
-    const theme = presentation.theme;
-    const slides = presentation.content_json.slides;
-
-    const getColors = () => {
-        switch (theme) {
-            case 'kids-colorful': return { bg: 'FFFBEB', primary: 'B45309', secondary: 'F59E0B', text: '92400E' };
-            case 'institutional': return { bg: 'F8FAFC', primary: '1E3A8A', secondary: '2563EB', text: '0F172A' };
-            default: return { bg: 'FFFFFF', primary: '0F172A', secondary: '3B82F6', text: '475569' }; // Clean
-        }
-    };
-
-    const colors = getColors();
-
-    for (const slide of slides) {
-        const slideObj = pptx.addSlide();
-        slideObj.background = { color: colors.bg };
-
-        // Decorative Shapes based on theme
-        if (theme === 'kids-colorful') {
-            slideObj.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.5, fill: { color: colors.secondary } });
-            slideObj.addShape(pptx.ShapeType.ellipse, { x: -1, y: -1, w: 3, h: 3, fill: { color: colors.secondary, transparency: 80 } });
-        } else if (theme === 'institutional') {
-            slideObj.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 1, fill: { color: colors.primary } });
-            slideObj.addShape(pptx.ShapeType.rect, { x: 0, y: '90%', w: '100%', h: 0.1, fill: { color: colors.secondary } });
-        }
-
-        switch (slide.type) {
-            case 'title':
-                const titleY = theme === 'institutional' ? '45%' : '40%';
-                slideObj.addText(slide.headline.toUpperCase(), {
-                    x: '10%', y: titleY, w: '80%', fontSize: 44, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, align: 'center', fontFace: theme === 'kids-colorful' ? 'Arial' : 'Helvetica'
-                });
-                if (slide.subheadline) {
-                    slideObj.addText(slide.subheadline, {
-                        x: '10%', y: '58%', w: '80%', fontSize: 22, color: theme === 'institutional' ? '64748B' : colors.text, align: 'center', italic: true, fontFace: 'Helvetica'
-                    });
-                }
-                break;
-
-            case 'bullets':
-                slideObj.addText(slide.headline.toUpperCase(), {
-                    x: '5%', y: theme === 'institutional' ? '5%' : '10%', w: '90%', fontSize: 32, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, fontFace: 'Helvetica'
-                });
-                if (slide.bullets) {
-                    slideObj.addText(slide.bullets.join('\n\n'), {
-                        x: '10%', y: '30%', w: '80%', h: '60%', fontSize: 18, color: colors.text, valign: 'top', bullet: { indent: 20 }, fontFace: 'Helvetica'
-                    });
-                }
-                break;
-
-            case 'image_caption':
-                slideObj.addText(slide.headline.toUpperCase(), {
-                    x: '5%', y: theme === 'institutional' ? '5%' : '10%', w: '40%', fontSize: 28, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, fontFace: 'Helvetica'
-                });
-
-                // Caption box
-                slideObj.addShape(pptx.ShapeType.rect, { x: '5%', y: '30%', w: '40%', h: '50%', fill: { color: 'F1F5F9' }, line: { color: colors.secondary, width: 1 } });
-                slideObj.addText(slide.caption || slide.subheadline || '', {
-                    x: '7%', y: '35%', w: '36%', h: '40%', fontSize: 16, color: colors.text, italic: true, valign: 'middle', align: 'center'
-                });
-
-                // Image
-                const imgUrl = slide.image_url || `https://source.unsplash.com/featured/800x600?education,${encodeURIComponent(slide.headline)}`;
-                slideObj.addImage({
-                    path: imgUrl,
-                    x: '50%', y: '15%', w: '45%', h: '70%',
-                    rounding: true
-                });
-                break;
-
-            case 'two_columns':
-                slideObj.addText(slide.headline.toUpperCase(), {
-                    x: '5%', y: theme === 'institutional' ? '5%' : '10%', w: '90%', fontSize: 28, color: theme === 'institutional' ? 'FFFFFF' : colors.primary, bold: true, fontFace: 'Helvetica'
-                });
-
-                if (slide.column_left) {
-                    slideObj.addShape(pptx.ShapeType.rect, { x: '5%', y: '25%', w: '42%', h: '65%', fill: { color: 'F8FAFC' }, line: { color: 'E2E8F0', width: 1 } });
-                    slideObj.addText(slide.column_left.join('\n\n'), {
-                        x: '7%', y: '30%', w: '38%', h: '55%', fontSize: 14, color: colors.text, valign: 'top', bullet: { indent: 15 }, fontFace: 'Helvetica'
-                    });
-                }
-                if (slide.column_right) {
-                    slideObj.addShape(pptx.ShapeType.rect, { x: '52%', y: '25%', w: '42%', h: '65%', fill: { color: 'F8FAFC' }, line: { color: 'E2E8F0', width: 1 } });
-                    slideObj.addText(slide.column_right.join('\n\n'), {
-                        x: '54%', y: '30%', w: '38%', h: '55%', fontSize: 14, color: colors.text, valign: 'top', bullet: { indent: 15 }, fontFace: 'Helvetica'
-                    });
-                }
-                break;
-
-            case 'summary':
-                slideObj.addText(slide.headline.toUpperCase(), {
-                    x: '10%', y: theme === 'institutional' ? '20%' : '15%', w: '80%', fontSize: 36, color: colors.primary, bold: true, align: 'center', fontFace: 'Helvetica'
-                });
-                if (slide.bullets) {
-                    slideObj.addText(slide.bullets.join('\n\n'), {
-                        x: '15%', y: '40%', w: '70%', h: '45%', fontSize: 18, color: colors.text, align: 'center', valign: 'top', fontFace: 'Helvetica',
-                        bullet: { type: 'number' }
-                    });
-                }
-                break;
-        }
-
-        // Branding
-        slideObj.addText('PlanejaEdu AI • Inteligência Pedagógica', {
-            x: '5%', y: '92%', w: '90%', fontSize: 9, color: '94A3B8', align: 'right', fontFace: 'Helvetica'
+    if (presentation && presentation.content_json && presentation.content_json.slides) {
+        presentation.content_json.slides.forEach((slide: any) => {
+            const slideObj = pptx.addSlide();
+            slideObj.addText(slide.headline || 'Slide', { x: 1, y: 1, fontSize: 24 });
         });
     }
 
     await pptx.writeFile({ fileName: `${filename}.pptx` });
+};
+
+export const exportLessonsToWord = async (plans: LessonPlan[], filename = "Planos_de_Aula.docx") => {
+    const doc = new Document({
+        sections: plans.map(plan => ({
+            properties: {},
+            children: [
+                new Paragraph({ children: [new TextRun({ text: plan.title, bold: true, size: 32 })] }),
+                new Paragraph({ children: [new TextRun({ text: `\n${plan.discipline} • ${plan.grade}`, size: 24 })] })
+            ]
+        }))
+    });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, filename);
+};
+
+export const exportAnnualPlansToWord = async (plans: AnnualPlan[], filename = "Planos_Anuais.docx") => {
+    const doc = new Document({
+        sections: plans.map(plan => ({
+            properties: {},
+            children: [
+                new Paragraph({ children: [new TextRun({ text: plan.discipline, bold: true, size: 32 })] })
+            ]
+        }))
+    });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, filename);
+};
+
+
+
+export const exportAssessmentsToWord = async (assessments: Assessment[], filename = "Avaliacoes.docx") => {
+    const doc = new Document({
+        sections: assessments.map(assessment => ({
+            properties: {},
+            children: [
+                new Paragraph({ children: [new TextRun({ text: assessment.title, bold: true, size: 32 })] })
+            ]
+        }))
+    });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, filename);
+};
+
+export const exportReportsToWord = async (reports: AppReport[], filename = "Relatorios.docx") => {
+    const doc = new Document({
+        sections: reports.map(report => ({
+            properties: {},
+            children: [
+                new Paragraph({ children: [new TextRun({ text: report.studentName, bold: true, size: 32 })] })
+            ]
+        }))
+    });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, filename);
 };

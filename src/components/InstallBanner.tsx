@@ -132,8 +132,12 @@ export function InstallBanner() {
                     )}
 
                     <button
-                        onClick={handleDismiss}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDismiss();
+                        }}
+                        className="relative z-10 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                     >
                         <X size={16} />
                     </button>

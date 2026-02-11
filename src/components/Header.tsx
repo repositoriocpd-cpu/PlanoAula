@@ -23,9 +23,12 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <div className="md:hidden">
                     <h1 className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">PlanejaEdu</h1>
                 </div>
-                <h2 className="hidden md:block text-xl font-bold text-gray-800">
-                    Olá, <span className="text-primary">{displayName.split(' ')[0]}</span>
-                </h2>
+                <div>
+                    <h1 className="text-xl font-bold text-gray-800">
+                        Olá, <span className="text-primary">{profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
+                    </h1>
+                    <p className="text-sm text-gray-500">Bem-vindo ao PlanejaEdu AI</p>
+                </div>
             </div>
 
             <div className="flex items-center gap-3">

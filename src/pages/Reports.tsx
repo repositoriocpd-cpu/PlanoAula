@@ -13,6 +13,7 @@ import { PedagogicalResourcesPanel } from '../components/pedagogical/Pedagogical
 import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
 import { generatePedagogicalResource } from '../services/resourceGenerator';
 import type { ResourceType } from '../types/resources';
+import { performSafetyBackup } from '../services/backupService';
 
 export function Reports() {
     const { user } = useAuth();
@@ -41,6 +42,11 @@ export function Reports() {
                 report.userId = user.id;
             }
             await addReport(report);
+            await performSafetyBackup({
+                type: 'report',
+                data: report,
+                filename: `RELATORIO_${report.studentName.replace(/ /g, '_')}`
+            });
             setSelectedReportId(report.id);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar relatório.';

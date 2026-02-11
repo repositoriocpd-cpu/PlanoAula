@@ -63,22 +63,41 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
 
     addSequence: async (sequence) => {
         console.log('Adding sequence to store and Supabase:', sequence.id);
+
+        // Ensure userId is present
+        if (!sequence.userId) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                sequence.userId = user.id;
+            } else {
+                console.error('Cannot add sequence: No user logged in.');
+                return; // Prevent adding if no user
+            }
+        }
+
         set((state) => ({ sequences: [sequence, ...state.sequences] }));
+
         try {
+            const payload: any = {
+                id: sequence.id,
+                user_id: sequence.userId,
+                theme: sequence.theme,
+                num_classes: typeof sequence.numClasses === 'string' ? parseInt(sequence.numClasses, 10) : sequence.numClasses,
+                objectives: sequence.objectives,
+                bncc_skills: sequence.bnccSkills,
+                classes: sequence.classes,
+                final_evaluation: sequence.finalEvaluation,
+                header_color: sequence.headerColor,
+                created_at: sequence.createdAt
+            };
+
+            if (sequence.generatedResources) {
+                payload.generated_resources = sequence.generatedResources;
+            }
+
             const { data, error } = await supabase
                 .from('didactic_sequences')
-                .insert({
-                    id: sequence.id,
-                    user_id: sequence.userId,
-                    theme: sequence.theme,
-                    num_classes: sequence.numClasses,
-                    objectives: sequence.objectives,
-                    bncc_skills: sequence.bnccSkills,
-                    classes: sequence.classes,
-                    final_evaluation: sequence.finalEvaluation,
-                    header_color: sequence.headerColor,
-                    created_at: sequence.createdAt
-                })
+                .insert(payload)
                 .select();
 
             if (error) {
@@ -88,6 +107,7 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
             console.log('Sequence added successfully to Supabase:', data);
         } catch (error) {
             console.error('Error adding sequence catch block:', error);
+            // Optionally revert local state if save fails
         }
     },
 

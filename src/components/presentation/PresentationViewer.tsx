@@ -30,7 +30,15 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({ presenta
             setTimeout(() => setIsSaved(false), 3000);
         } catch (error) {
             console.error('Error saving presentation:', error);
-            alert('Erro ao salvar apresentação. Verifique sua conexão.');
+            let msg = 'Erro desconhecido';
+            if (error instanceof Error) {
+                msg = error.message;
+            } else if (typeof error === 'object' && error !== null) {
+                // Tenta extrair mensagem de erro do PostgrestError ou objeto genérico
+                const errObj = error as any;
+                msg = errObj.message || errObj.error_description || JSON.stringify(error);
+            }
+            alert(`Erro ao salvar: ${msg}`);
         } finally {
             setIsSaving(false);
         }
@@ -87,8 +95,8 @@ export const PresentationViewer: React.FC<PresentationViewerProps> = ({ presenta
                         onClick={handleSave}
                         disabled={isSaving || isSaved}
                         className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase transition-all shadow-lg ${isSaved
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
                             } disabled:opacity-70`}
                     >
                         {isSaving ? (

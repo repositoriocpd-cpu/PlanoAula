@@ -13,6 +13,7 @@ import { PedagogicalResourcesPanel } from '../components/pedagogical/Pedagogical
 import { ResourceViewerModal } from '../components/pedagogical/ResourceViewerModal';
 import { generatePedagogicalResource } from '../services/resourceGenerator';
 import type { ResourceType } from '../types/resources';
+import { performSafetyBackup } from '../services/backupService';
 
 export function Assessments() {
     const { user } = useAuth();
@@ -41,6 +42,11 @@ export function Assessments() {
                 assessment.userId = user.id;
             }
             await addAssessment(assessment);
+            await performSafetyBackup({
+                type: 'assessment',
+                data: assessment,
+                filename: `AVALIACAO_${assessment.title.replace(/ /g, '_')}`
+            });
             setSelectedAssessmentId(assessment.id);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao gerar avaliação.';

@@ -39,6 +39,17 @@ export const PresentationSlide: React.FC<PresentationSlideProps> = ({ slide, the
 
     const classes = getThemeClasses();
 
+    const renderTextWithBold = (text: string) => {
+        if (!text) return null;
+        const parts = text.split(/(\*\*.*?\*\*)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={index} className="font-black text-inherit">{part.slice(2, -2)}</strong>;
+            }
+            return <span key={index}>{part}</span>;
+        });
+    };
+
     const renderContent = () => {
         switch (slide.type) {
             case 'title':
@@ -49,21 +60,21 @@ export const PresentationSlide: React.FC<PresentationSlideProps> = ({ slide, the
                             <PresentationIcon className={`h-20 w-20 ${classes.icon} relative z-10`} />
                         </div>
                         <div className="space-y-4">
-                            <h1 className={classes.headline}>{slide.headline}</h1>
+                            <h1 className={classes.headline}>{renderTextWithBold(slide.headline)}</h1>
                             <div className="h-1.5 w-24 bg-current mx-auto rounded-full opacity-20" />
-                            <p className="text-2xl font-medium opacity-60 tracking-wide max-w-2xl">{slide.subheadline}</p>
+                            <p className="text-2xl font-medium opacity-60 tracking-wide max-w-2xl">{renderTextWithBold(slide.subheadline || '')}</p>
                         </div>
                     </div>
                 );
             case 'bullets':
                 return (
                     <div className="flex flex-col h-full space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <h2 className={classes.headline}>{slide.headline}</h2>
+                        <h2 className={classes.headline}>{renderTextWithBold(slide.headline)}</h2>
                         <div className="grid grid-cols-1 gap-4 flex-1">
                             {slide.bullets?.map((bullet, idx) => (
                                 <div key={idx} className={`flex items-start gap-5 p-6 rounded-[32px] border-2 ${classes.bullet} animate-in slide-in-from-left duration-500`} style={{ animationDelay: `${idx * 150}ms` }}>
                                     <div className={`mt-1.5 h-3 w-3 rounded-full ${classes.icon} bg-current shadow-lg shadow-current/20`} />
-                                    <p className="text-xl font-bold leading-relaxed">{bullet}</p>
+                                    <p className="text-xl font-bold leading-relaxed">{renderTextWithBold(bullet || '')}</p>
                                 </div>
                             ))}
                         </div>
@@ -73,10 +84,10 @@ export const PresentationSlide: React.FC<PresentationSlideProps> = ({ slide, the
                 return (
                     <div className="grid grid-cols-2 h-full gap-12 items-center animate-in fade-in duration-700">
                         <div className="space-y-8 text-left">
-                            <h2 className={classes.headline}>{slide.headline}</h2>
+                            <h2 className={classes.headline}>{renderTextWithBold(slide.headline)}</h2>
                             <div className={`p-8 rounded-[40px] ${classes.bullet} border-2 shadow-inner`}>
                                 <p className="text-2xl font-medium leading-relaxed italic opacity-80 decoration-primary/30">
-                                    "{slide.caption || slide.subheadline}"
+                                    "{renderTextWithBold(slide.caption || slide.subheadline || '')}"
                                 </p>
                             </div>
                         </div>
@@ -84,7 +95,7 @@ export const PresentationSlide: React.FC<PresentationSlideProps> = ({ slide, the
                             <div className="absolute -inset-4 bg-gradient-to-tr from-primary/10 to-transparent rounded-[50px] blur-2xl group-hover:opacity-100 transition-opacity opacity-0" />
                             <div className="h-full w-full rounded-[40px] overflow-hidden border-8 border-white shadow-2xl relative">
                                 <img
-                                    src={slide.image_url || `https://source.unsplash.com/featured/800x600?education,${encodeURIComponent(slide.headline)}`}
+                                    src={slide.image_url && slide.image_url !== 'PLACEHOLDER' ? slide.image_url : `https://pollinations.ai/p/${encodeURIComponent(slide.headline + ' education photorealistic')}?width=800&height=600&nologo=true`}
                                     alt={slide.headline}
                                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000"
                                 />
@@ -96,14 +107,14 @@ export const PresentationSlide: React.FC<PresentationSlideProps> = ({ slide, the
             case 'two_columns':
                 return (
                     <div className="flex flex-col h-full space-y-10 animate-in fade-in duration-700">
-                        <h2 className={classes.headline}>{slide.headline}</h2>
+                        <h2 className={classes.headline}>{renderTextWithBold(slide.headline)}</h2>
                         <div className="grid grid-cols-2 gap-8 flex-1">
                             <div className={`p-8 rounded-[40px] border-2 ${classes.bullet} flex flex-col`}>
                                 <ul className="space-y-6">
                                     {slide.column_left?.map((item, idx) => (
                                         <li key={idx} className="flex gap-4 items-start text-lg font-bold">
                                             <CheckCircle className={`h-6 w-6 ${classes.icon} shrink-0`} />
-                                            {item}
+                                            {renderTextWithBold(item || '')}
                                         </li>
                                     ))}
                                 </ul>
@@ -113,7 +124,7 @@ export const PresentationSlide: React.FC<PresentationSlideProps> = ({ slide, the
                                     {slide.column_right?.map((item, idx) => (
                                         <li key={idx} className="flex gap-4 items-start text-lg font-bold">
                                             <div className={`mt-2 h-2 w-2 rounded-full ${classes.icon} bg-current shrink-0`} />
-                                            {item}
+                                            {renderTextWithBold(item || '')}
                                         </li>
                                     ))}
                                 </ul>
@@ -127,11 +138,11 @@ export const PresentationSlide: React.FC<PresentationSlideProps> = ({ slide, the
                         <div className={`p-8 rounded-full ${classes.accent} mb-4 shadow-xl`}>
                             <CheckCircle className={`h-24 w-24 ${classes.icon}`} />
                         </div>
-                        <h2 className={`${classes.headline} border-none`}>{slide.headline}</h2>
+                        <h2 className={`${classes.headline} border-none`}>{renderTextWithBold(slide.headline)}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                             {slide.bullets?.map((bullet, idx) => (
                                 <div key={idx} className={`p-6 rounded-[28px] border-2 ${classes.bullet} font-bold text-lg shadow-sm hover:translate-y-[-4px] transition-all`}>
-                                    {bullet}
+                                    {renderTextWithBold(bullet || '')}
                                 </div>
                             ))}
                         </div>

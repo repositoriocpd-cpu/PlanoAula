@@ -122,19 +122,38 @@ export function AssessmentViewer({ assessment, onBack, onDelete }: AssessmentVie
                         </div>
                     ))}
 
-                    {assessment.rubric && assessment.rubric.map((c, index) => (
-                        <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <h3 className="font-bold text-gray-800 mb-3 border-b pb-2">{c.criteria}</h3>
-                            <div className="grid grid-cols-1 gap-2">
-                                {c.levels.map((l, i) => (
-                                    <div key={i} className="flex flex-col sm:flex-row sm:items-baseline">
-                                        <span className="font-semibold min-w-[100px]" style={{ color: activeColor }}>{l.level}:</span>
-                                        <span className="text-gray-600 text-sm text-justify">{l.description}</span>
-                                    </div>
-                                ))}
-                            </div>
+                    {assessment.rubric && assessment.rubric.length > 0 && (
+                        <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-1/4">
+                                            Critério
+                                        </th>
+                                        {assessment.rubric[0].levels.map((l, i) => (
+                                            <th key={i} scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider" style={{ color: activeColor }}>
+                                                {l.level}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {assessment.rubric.map((row, idx) => (
+                                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                                            <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                                                {row.criteria}
+                                            </td>
+                                            {row.levels.map((col, cIdx) => (
+                                                <td key={cIdx} className="px-6 py-4 text-sm text-gray-600 text-justify align-top">
+                                                    {col.description}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
         </div>
