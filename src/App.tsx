@@ -14,7 +14,7 @@ import { Login } from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { BNCCInfo } from './pages/BNCCInfo';
-import { InstallBanner } from './components/InstallBanner';
+import { ReloadPrompt } from './components/ReloadPrompt';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -90,7 +90,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <InstallBanner />
+        <ReloadPrompt />
         <Routes>
           <Route path="/login" element={<Login />} />
 

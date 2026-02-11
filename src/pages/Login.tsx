@@ -112,7 +112,7 @@ export function Login() {
                         </h1>
                         <p className="text-lg text-pink-50 max-w-md leading-relaxed drop-shadow-md">
                             <span className="font-bold text-white block mb-1">Professor, Seu Tempo é Precioso!</span>
-                            Esqueça a burocracia. Use nossa IA para criar planos de aula, avaliações e relatórios em segundos.
+                            Esqueça a burocracia. Use o PlanejaEdu para criar planos de aula, avaliações e relatórios em segundos.
                         </p>
 
                         {/* Status Indicators */}

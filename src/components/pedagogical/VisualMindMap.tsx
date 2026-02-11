@@ -20,7 +20,11 @@ export const VisualMindMap: React.FC<VisualMindMapProps> = ({ markdown }) => {
 
         // Initialize markmap
         if (!mmRef.current) {
-            mmRef.current = Markmap.create(svgRef.current);
+            mmRef.current = Markmap.create(svgRef.current, {
+                initialExpandLevel: 1, // Start collapsed (Root + 1 level)
+                zoom: true,
+                pan: true,
+            });
         }
 
         // Clean markdown artifacts (specifically ## inside text)

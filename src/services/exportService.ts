@@ -609,10 +609,33 @@ export const exportMarkdownToPDF = (title: string, markdown: string, filename: s
     const lines = splitTextWithBold(internalDoc, markdown, PAGE.contentWidth);
     lines.forEach((line: string) => {
         y = checkPageBreak(internalDoc, y, 6, 'Recurso Pedagógico', title, pageNum);
+
+        // Detect Header Lines (starting with #)
+        const trimmedLine = line.trim();
+        const isHeader = trimmedLine.startsWith('#');
+        const contentToRender = isHeader ? trimmedLine.replace(/^#+\s*/, '') : line;
+
+        if (isHeader) {
+            internalDoc.setFont(FONTS.bold.font, FONTS.bold.style);
+        } else {
+            internalDoc.setFont(FONTS.body.font, FONTS.body.style);
+        }
+
         const isEndOfParagraph = line.endsWith('\n');
-        const cleanLine = line.replace('\n', '');
-        y = renderJustifiedBoldText(internalDoc, cleanLine, PAGE.margin, y, PAGE.contentWidth, 10, isEndOfParagraph);
-        y += 2;
+        const cleanLine = contentToRender.replace('\n', '');
+
+        // If header, render simpler (no justified needed usually, but keeping consistency)
+        if (isHeader) {
+            internalDoc.text(cleanLine, PAGE.margin, y);
+        } else {
+            y = renderJustifiedBoldText(internalDoc, cleanLine, PAGE.margin, y, PAGE.contentWidth, 10, isEndOfParagraph);
+            y -= 2; // Adjust for renderJustified adding line height, we manage it below for headers
+        }
+
+        y += isHeader ? 8 : 4; // More space after headers
+
+        // Reset font
+        internalDoc.setFont(FONTS.body.font, FONTS.body.style);
     });
 
     drawFooter(internalDoc, pageNum.val);
@@ -630,17 +653,30 @@ export const exportMarkdownToWord = async (title: string, markdown: string, file
                     ],
                     spacing: { after: 400 }
                 }),
-                ...markdown.split('\n').map(line => new Paragraph({
-                    alignment: AlignmentType.JUSTIFIED,
-                    children: line.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
-                        if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
-                            const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
-                            return new TextRun({ text: content, bold: true, size: 22 });
-                        }
-                        return new TextRun({ text: part, size: 22 });
-                    }),
-                    spacing: { after: 200 }
-                }))
+                ...markdown.split('\n').map(line => {
+                    const trimmed = line.trim();
+                    const isHeader = trimmed.startsWith('#');
+                    const cleanContent = isHeader ? trimmed.replace(/^#+\s*/, '') : line;
+
+                    if (isHeader) {
+                        return new Paragraph({
+                            children: [new TextRun({ text: cleanContent, bold: true, size: 28, color: "1F2937" })],
+                            spacing: { before: 240, after: 120 }
+                        });
+                    }
+
+                    return new Paragraph({
+                        alignment: AlignmentType.JUSTIFIED,
+                        children: cleanContent.split(/(\*\*.*?\*\*|\*.*?\*)/g).map(part => {
+                            if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('*') && part.endsWith('*'))) {
+                                const content = part.startsWith('**') ? part.slice(2, -2) : part.slice(1, -1);
+                                return new TextRun({ text: content, bold: true, size: 22 });
+                            }
+                            return new TextRun({ text: part, size: 22 });
+                        }),
+                        spacing: { after: 200 }
+                    });
+                })
             ]
         }]
     });

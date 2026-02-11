@@ -66,7 +66,7 @@ export function Home() {
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-600 to-secondary animate-gradient-x">Precioso</span>
                     </h1>
                     <p className="text-gray-500 text-base md:text-lg mb-10 max-w-lg leading-relaxed">
-                        Esqueça a burocracia. Use nossa IA para criar planos de aula, avaliações e relatórios em segundos.
+                        Esqueça a burocracia. Use o PlanejaEdu para criar planos de aula, avaliações e relatórios em segundos.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                         <button

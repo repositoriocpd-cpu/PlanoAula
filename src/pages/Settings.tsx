@@ -14,7 +14,13 @@ import {
     CheckCircle,
     Activity,
     Upload,
-    Pencil
+    Pencil,
+    Brain,
+    Layout,
+    CheckSquare,
+    Network,
+    Zap,
+    Sparkles
 } from 'lucide-react';
 import type { Profile, SchoolSettings, SystemLog } from '../types/settings';
 
@@ -845,53 +851,167 @@ export function Settings() {
                     </div>
                 )}
 
-                {/* About Tab */}
+                {/* About Tab - Premium Showcase */}
                 {activeTab === 'about' && (
-                    <div className="max-w-3xl space-y-8">
-                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
-                            <div className="relative z-10">
-                                <h2 className="text-3xl font-black mb-2">PlanejaEdu <span className="text-purple-400">SMEDU</span></h2>
-                                <p className="text-gray-300">Sistema de Gestão Pedagógica e Planejamento</p>
-                                <div className="mt-6 flex gap-4">
-                                    <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-mono">v1.2.0</span>
-                                    <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-mono">Build 2026.02</span>
+                    <div className="max-w-5xl mx-auto space-y-10 pb-12">
+                        {/* Hero Banner */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-fuchsia-900 text-white p-10 rounded-3xl shadow-2xl">
+                            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                                            <Sparkles className="w-6 h-6 text-yellow-300" />
+                                        </div>
+                                        <span className="text-sm font-semibold tracking-wider uppercase text-purple-200">Versão Enterprise 2.0</span>
+                                    </div>
+                                    <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">
+                                        PlanejaEdu <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-pink-200">SMEDU</span>
+                                    </h2>
+                                    <p className="text-lg text-purple-100 max-w-xl leading-relaxed">
+                                        A plataforma definitiva para gestão pedagógica inteligente. Transformando o futuro da educação com tecnologia de ponta e design centrado no educador.
+                                    </p>
+                                </div>
+                                <div className="text-right hidden md:block">
+                                    <div className="text-5xl font-bold opacity-20">2026</div>
+                                    <div className="text-sm uppercase tracking-widest opacity-40">Departamento de Tecnologia</div>
                                 </div>
                             </div>
-                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4">
-                                <Shield className="w-64 h-64" />
+
+                            {/* Decorative Background Elements */}
+                            <div className="absolute top-0 right-0 -mt-10 -mr-10 opacity-10">
+                                <Brain className="w-96 h-96" />
+                            </div>
+                            <div className="absolute bottom-0 left-0 -mb-10 -ml-10 opacity-10">
+                                <Network className="w-80 h-80" />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                                <h3 className="font-bold text-gray-800 mb-4 flex items-center">
-                                    <Info className="w-5 h-5 mr-2 text-blue-500" /> Funcionalidades Principais
-                                </h3>
-                                <ul className="space-y-2 text-sm text-gray-600">
-                                    <li>• Geração de Planos de Aula com IA</li>
-                                    <li>• Planejamento Anual e Sequências Didáticas</li>
-                                    <li>• Criação de Avaliações e Relatórios</li>
-                                    <li>• Biblioteca de Recursos Digitais (BNCC)</li>
-                                    <li>• Gestão de Usuários e Permissões</li>
+                        {/* Features Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                            {/* Card: Planejamento */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <Layout className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-3">Planejamento Estratégico</h3>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-blue-400" /> Planos de Aula (BNCC)
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-blue-400" /> Planos Anuais Completos
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-blue-400" /> Sequências Didáticas
+                                    </li>
                                 </ul>
                             </div>
 
-                            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                                <h3 className="font-bold text-gray-800 mb-4 flex items-center">
-                                    <Lock className="w-5 h-5 mr-2 text-green-500" /> Segurança e Privacidade
-                                </h3>
-                                <ul className="space-y-2 text-sm text-gray-600">
-                                    <li>• Criptografia de dados sensíveis (End-to-End)</li>
-                                    <li>• Conformidade com LGPD</li>
-                                    <li>• Backups diários automatizados</li>
-                                    <li>• Controle de acesso baseado em funções (RBAC)</li>
+                            {/* Card: Inteligência Artificial */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                                <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <Brain className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-3">Inteligência Artificial</h3>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <Sparkles className="w-4 h-4 mr-2 text-purple-400" /> Geração Automática de Conteúdo
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <Sparkles className="w-4 h-4 mr-2 text-purple-400" /> Assistente Criativo Smart
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <Sparkles className="w-4 h-4 mr-2 text-purple-400" /> Sugestões Pedagógicas
+                                    </li>
                                 </ul>
                             </div>
+
+                            {/* Card: Gestão & Avaliação */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <CheckSquare className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-3">Avaliação & Relatórios</h3>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-green-400" /> Avaliações Personalizadas
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-green-400" /> Relatórios Individuais
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-green-400" /> Rubricas de Avaliação
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* Card: Recursos Visuais */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                                <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <Network className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-3">Metodologias Visuais</h3>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-orange-400" /> Mapas Mentais Interativos
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-orange-400" /> Exportação PDF/Word Inteligente
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-2 text-orange-400" /> Visualização Dinâmica
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* Card: Segurança */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                                <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <Shield className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-3">Segurança Total</h3>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <Lock className="w-4 h-4 mr-2 text-red-400" /> Criptografia Ponta a Ponta
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <Database className="w-4 h-4 mr-2 text-red-400" /> Backup 1-Click & Restore
+                                    </li>
+                                    <li className="flex items-center text-gray-600 text-sm">
+                                        <FileText className="w-4 h-4 mr-2 text-red-400" /> Auditoria de Logs
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* Card: Inovação */}
+                            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-2xl shadow-sm border border-indigo-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                                <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-indigo-300">
+                                    <Zap className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-indigo-900 mb-3">Próximos Passos</h3>
+                                <p className="text-sm text-indigo-700 leading-relaxed mb-4">
+                                    Estamos constantemente evoluindo. Em breve novas funcionalidades de colaboração e gamificação.
+                                </p>
+                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-200 text-indigo-800 text-xs font-bold">
+                                    Roteiro 2026/Q2
+                                </span>
+                            </div>
+
                         </div>
 
-                        <div className="text-center text-xs text-gray-400 pt-8 border-t border-gray-100">
-                            <p>&copy; 2026 Secretaria Municipal de Educação. Todos os direitos reservados.</p>
-                            <p>Desenvolvido pelo Departamento de Tecnologia da Informação.</p>
+                        {/* Credits / Footer */}
+                        <div className="mt-12 text-center border-t border-gray-100 pt-8">
+                            <div className="flex justify-center items-center gap-2 mb-2">
+                                <School className="w-5 h-5 text-gray-400" />
+                                <span className="text-gray-500 font-medium">Secretaria Municipal de Educação</span>
+                            </div>
+                            <p className="text-sm text-gray-400">
+                                &copy; 2026 PlanejaEdu SMEDU. Todos os direitos reservados.
+                            </p>
+                            <p className="text-xs text-gray-300 mt-2">
+                                Desenvolvido com <span className="text-red-300">❤</span> pelo Departamento C.P.D./SMEDU
+                            </p>
                         </div>
                     </div>
                 )}
