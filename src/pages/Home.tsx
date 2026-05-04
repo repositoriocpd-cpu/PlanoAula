@@ -166,8 +166,3 @@ export function Home() {
         </div>
     );
 }
-
-// Add ChevronRight to imports at top (I'll do this in a single edit if possible or second call)
-import { ChevronRight as ChevronRightIcon } from 'lucide-react';
-    );
-}

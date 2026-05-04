@@ -187,6 +187,7 @@ export async function generateAssessment(data: AssessmentFormData): Promise<Asse
     Disciplina: ${data.discipline}
     Série: ${data.grade}
     Conteúdo: ${data.content}
+    Quantidade de Questões/Critérios: ${data.questionCount}
 
     ${data.type === 'Rubrica' ?
       `Retorne um JSON com:
@@ -195,7 +196,8 @@ export async function generateAssessment(data: AssessmentFormData): Promise<Asse
          "rubric": [
            { "criteria": "Critério 1", "levels": [{ "level": "Excelente", "description": "..." }, { "level": "Bom", "description": "..." }] }
          ]
-       }`
+       }
+       OBS: Crie exatamente ${data.questionCount} critérios na rubrica.`
       :
       `Retorne um JSON com:
        {
@@ -214,7 +216,8 @@ export async function generateAssessment(data: AssessmentFormData): Promise<Asse
              "type": "essay"
            }
          ]
-       }`
+       }
+       OBS: Crie exatamente ${data.questionCount} questões.`
     }
   `;
 

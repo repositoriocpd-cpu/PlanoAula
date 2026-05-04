@@ -34,4 +34,5 @@ export interface AssessmentFormData {
     grade: string;
     content: string;
     type: AssessmentType;
+    questionCount: number;
 }

@@ -20,6 +20,27 @@ export function Login() {
         }
     }, [user, navigate, isLoading]);
 
+    const handleResetPassword = async () => {
+        if (!email) {
+            setError('Por favor, insira seu e-mail no campo acima para redefinir a senha.');
+            return;
+        }
+        setIsLoading(true);
+        setError(null);
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/`,
+            });
+            if (error) throw error;
+            alert('E-mail de redefinição de senha enviado! Verifique sua caixa de entrada.');
+        } catch (err: any) {
+            console.error('Reset password error:', err);
+            setError(err.message || 'Falha ao solicitar redefinição de senha.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -135,9 +156,13 @@ export function Login() {
                                     />
                                 </div>
                                 <div className="flex justify-end mt-2">
-                                    <a href="#" className="text-xs text-purple-600 hover:text-purple-800 font-medium hover:underline transition">
+                                    <button 
+                                        type="button" 
+                                        onClick={handleResetPassword}
+                                        className="text-xs text-purple-600 hover:text-purple-800 font-medium hover:underline transition"
+                                    >
                                         Esqueceu a senha?
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
 

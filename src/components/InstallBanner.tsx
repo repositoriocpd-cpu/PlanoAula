@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Share, Download, Smartphone } from 'lucide-react';
+import { X, Share, Download } from 'lucide-react';
 
 export function InstallBanner() {
     const [isVisible, setIsVisible] = useState(false);
@@ -110,7 +110,5 @@ export function InstallBanner() {
                 </div>
             </div>
         </div>
-    );
-}
     );
 }
