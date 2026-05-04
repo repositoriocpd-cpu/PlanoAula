@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, FileCheck, BookOpen, GraduationCap, FileQuestion, AlignLeft, Wand2 } from 'lucide-react';
+import { Loader2, FileCheck, BookOpen, GraduationCap, FileQuestion, AlignLeft, Wand2, ListOrdered } from 'lucide-react';
 import type { AssessmentFormData } from '../../types/assessment';
 
 const schema = z.object({
@@ -9,6 +9,7 @@ const schema = z.object({
     grade: z.string().min(1, 'Série é obrigatória'),
     content: z.string().min(3, 'Conteúdo é obrigatório'),
     type: z.enum(['Prova', 'Atividade', 'Rubrica', 'Diagnóstica']),
+    questionCount: z.coerce.number().min(1, 'Mínimo de 1').max(20, 'Máximo de 20'),
 });
 
 interface AssessmentFormProps {
@@ -18,7 +19,10 @@ interface AssessmentFormProps {
 
 export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
     const { register, handleSubmit, formState: { errors } } = useForm<AssessmentFormData>({
-        resolver: zodResolver(schema),
+        resolver: zodResolver(schema as any),
+        defaultValues: {
+            questionCount: 10
+        }
     });
 
     return (
@@ -61,7 +65,7 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
                     {errors.discipline && <p className="text-red-500 text-xs mt-1 ml-1">{errors.discipline.message}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Série/Ano</label>
                         <div className="relative">
@@ -105,6 +109,23 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
                             </select>
                         </div>
                         {errors.type && <p className="text-red-500 text-xs mt-1 ml-1">{errors.type.message}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Qtd. Questões</label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <ListOrdered className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                {...register('questionCount')}
+                                className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all duration-200"
+                            />
+                        </div>
+                        {errors.questionCount && <p className="text-red-500 text-xs mt-1 ml-1">{errors.questionCount.message}</p>}
                     </div>
                 </div>
 

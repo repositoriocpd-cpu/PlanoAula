@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
     BookOpen,
     Calendar,
@@ -9,7 +10,9 @@ import {
     LogOut,
     Home,
     Settings,
-    X
+    X,
+    Layers,
+    ChevronRight
 } from 'lucide-react';
 
 const navigation = [
@@ -19,12 +22,10 @@ const navigation = [
     { name: 'Sequência Didática', href: '/didactic-sequence', icon: ListOrdered, color: 'text-amber-500' },
     { name: 'Avaliações', href: '/assessments', icon: FileCheck, color: 'text-rose-500' },
     { name: 'Relatório', href: '/reports', icon: BarChart, color: 'text-indigo-500' },
+    { name: 'Recursos', href: '/resources', icon: Layers, color: 'text-violet-500' },
     { name: 'Biblioteca', href: '/library', icon: Library, color: 'text-teal-500' },
     { name: 'Configurações', href: '/settings', icon: Settings, color: 'text-slate-500' },
 ];
-
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
     isOpen?: boolean;
@@ -116,6 +117,3 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </>
     );
 }
-
-// Help with missing ChevronRight in original code
-import { ChevronRight } from 'lucide-react';

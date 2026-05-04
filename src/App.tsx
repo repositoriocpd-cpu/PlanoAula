@@ -8,6 +8,7 @@ import { DidacticSequence } from './pages/DidacticSequence';
 import { Assessments } from './pages/Assessments';
 import { Reports } from './pages/Reports';
 import { Library } from './pages/Library';
+import { Resources } from './pages/Resources';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -54,6 +55,7 @@ function App() {
               <Route path="didactic-sequence" element={<DidacticSequence />} />
               <Route path="assessments" element={<Assessments />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="resources" element={<Resources />} />
               <Route path="library" element={<Library />} />
               <Route path="settings" element={<Settings />} />
             </Route>
